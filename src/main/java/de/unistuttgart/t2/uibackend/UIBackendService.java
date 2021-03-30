@@ -3,28 +3,39 @@ package de.unistuttgart.t2.uibackend;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import javax.annotation.PostConstruct;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import de.unistuttgart.t2.common.domain.CartContent;
 import de.unistuttgart.t2.common.domain.PaymentInfo;
 import de.unistuttgart.t2.common.domain.Product;
-import de.unistuttgart.t2.uibackend.restdetails.InventoryResponseErrorHandler;
+import de.unistuttgart.t2.common.domain.ReservationRequest;
 
 public class UIBackendService {
 
+	@Autowired
+	RestTemplate template;
+
 	private final Logger LOG = LoggerFactory.getLogger(getClass());
+	
+	private final ObjectMapper mapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES,
+			false); 
 
 	@Value("${t2.orchestrator.url}")
 	private String orchestratorUrl;
@@ -40,24 +51,47 @@ public class UIBackendService {
 		}
 	}
 
+	public UIBackendService() {
+	}
+
+	// because tests.
+	public UIBackendService(String cartUrl, String inventoryUrl, String orchestratorUrl) {
+		this.cartUrl = cartUrl;
+		this.inventoryUrl = inventoryUrl;
+		this.orchestratorUrl = orchestratorUrl;
+	}
+
 	/**
 	 * Get all products available at the store.
 	 * 
 	 * @return a list of all products available
 	 */
 	public List<Product> getAllProducts() {
-		// request to inventory service
-		List<Product> rval = new ArrayList<Product>();
+		String ressourceUrl = inventoryUrl + "/";
+		LOG.debug("get from " + ressourceUrl);
 
-		String ressourceUrl = inventoryUrl + "/get";
-		LOG.info("query to " + ressourceUrl);
+		List<Product> rval = new ArrayList<>();
 
-		RequestEntity<Void> request = RequestEntity.get(ressourceUrl).build();
-		ResponseEntity<List<Product>> response = (new RestTemplate()).exchange(request,
-				new ParameterizedTypeReference<List<Product>>() {
-				});
+		try {
+			ResponseEntity<String> response = template.getForEntity(ressourceUrl, String.class);
 
-		rval = response.getBody();
+			JsonNode root = mapper.readTree(response.getBody());
+			JsonNode inventory = root.findPath("inventory");
+
+			for (JsonNode node : inventory) {
+				try {
+					Product p = mapper.treeToValue(node, Product.class);
+					p.setId(getIdfromJson(inventory));
+					rval.add(p);
+				} catch (JsonProcessingException e) {
+					e.printStackTrace(); // single malformed product
+				}
+			}
+		} catch (RestClientException e) { // 404 or something like that.
+			e.printStackTrace();
+		} catch (JsonProcessingException e) { // malformed JSON, or whatever :x
+			e.printStackTrace();
+		}
 		return rval;
 	}
 
@@ -72,13 +106,19 @@ public class UIBackendService {
 	 * @param units     number of units to be added
 	 */
 	public void addItemToCart(String sessionId, String productId, Integer units) {
-		// TODO make this work with a request body. currently the deserialization does
-		// not work.
-		String ressourceUrl = cartUrl + "/add/" + sessionId + "/" + productId + "/" + units;
+		String ressourceUrl = cartUrl + "/" + sessionId;
+		LOG.debug("put to " + ressourceUrl);
 
-		LOG.info("put to " + ressourceUrl);
+		Optional<CartContent> optCartContent = getCartContent(sessionId);
 
-		(new RestTemplate()).put(ressourceUrl, null);
+		if (optCartContent.isPresent()) {
+			CartContent cartContent = optCartContent.get();
+			cartContent.getContent().put(productId, units);
+			template.put(ressourceUrl, cartContent);
+
+		} else {
+			template.put(ressourceUrl, new CartContent(Map.of(productId, units)));
+		}
 	}
 
 	/**
@@ -90,9 +130,22 @@ public class UIBackendService {
 	 * @param productId id of product to be deleted
 	 * @param units     number of units to be deleted
 	 */
-	public void deleteItemFromCart(String sessionID, String productId, Integer units) {
-		// request to cart service
-		// TODO
+	public void deleteItemFromCart(String sessionId, String productId, Integer units) {
+		String ressourceUrl = cartUrl + "/" + sessionId;
+		LOG.debug("put to " + ressourceUrl);
+
+		Optional<CartContent> optCartContent = getCartContent(sessionId);
+
+		if (optCartContent.isPresent()) {
+			CartContent cartContent = optCartContent.get();
+			Integer remainingUnitsInCart = cartContent.getUnits(productId) - units;
+			if (remainingUnitsInCart > 0) {
+				cartContent.getContent().put(productId, remainingUnitsInCart);
+			} else {
+				cartContent.getContent().remove(productId);
+			}
+			template.put(ressourceUrl, cartContent);
+		}
 	}
 
 	/**
@@ -101,31 +154,20 @@ public class UIBackendService {
 	 * @param sessionId for identification
 	 * @return list of all product in the cart
 	 */
-	public List<Product> getCart(String sessionId) {
+	public List<Product> getProductsInCart(String sessionId) {
 		List<Product> rval = new ArrayList<Product>();
 
-		// request cart
-		String ressourceUrl = cartUrl + "/get/" + sessionId;
-		LOG.info("get from " + ressourceUrl);
+		Optional<CartContent> optCartContent = getCartContent(sessionId);
 
-		CartContent cartContent = (new RestTemplate()).getForEntity(ressourceUrl, CartContent.class).getBody();
+		if (optCartContent.isPresent()) {
+			CartContent cartContent = optCartContent.get();
 
-		//call inventory with special template to handle 404 personally
-		RestTemplate template = new RestTemplate();
-		template.setErrorHandler(new InventoryResponseErrorHandler());
-		
-		for (String productId : cartContent.getProducts()) {
-			ressourceUrl = inventoryUrl + "/get/" + productId;
-			LOG.info("get from " + ressourceUrl);
-
-			ResponseEntity<Product> inventoryResponse = template.getForEntity(ressourceUrl, Product.class);
-			
-			if (inventoryResponse.getStatusCode() == HttpStatus.NOT_FOUND) {
-				continue;
+			for (String productId : cartContent.getProductIds()) {
+				getSingleProduct(productId).ifPresent((p) -> {
+					p.setId(productId);
+					rval.add(p);
+				});
 			}
-			
-			Product product = inventoryResponse.getBody();
-			rval.add(new Product(productId, product.getName(), cartContent.getUnits(productId), product.getPrice()));
 		}
 
 		return rval;
@@ -139,13 +181,13 @@ public class UIBackendService {
 	 */
 	public void confirmOrder(String sessionId) {
 		String ressourceUrl = orchestratorUrl + "/order/" + sessionId;
-		LOG.info("post to " + ressourceUrl);
+		LOG.debug("post to " + ressourceUrl);
 
-		ResponseEntity<Void> response = (new RestTemplate()).postForEntity(ressourceUrl, "", Void.class);
-		
-		LOG.info(response.getStatusCode().toString() + " - orchestrator accepted request :)");
+		ResponseEntity<Void> response = template.postForEntity(ressourceUrl, "", Void.class);
+
+		LOG.debug(response.getStatusCode().toString() + " - orchestrator accepted request :)");
 	}
-	
+
 	/**
 	 * UHM... not sure whether i'll really use this??
 	 * 
@@ -153,7 +195,98 @@ public class UIBackendService {
 	 * @param paymentInfo
 	 */
 	public void putPayment(String sessionId, PaymentInfo paymentInfo) {
-		
+		// TODO
 	}
 
+	/**
+	 * query cart service for content of a sessions cart.
+	 * 
+	 * if request returns 404 or deserialization failed, there is no cart content.
+	 * 
+	 * @param sessionId
+	 * @return content of cart iff it exists, empty optional otherwise
+	 */
+	protected Optional<CartContent> getCartContent(String sessionId) {
+		String ressourceUrl = cartUrl + "/" + sessionId;
+		LOG.debug("get from " + ressourceUrl);
+
+		try {
+			ResponseEntity<String> response = template.getForEntity(ressourceUrl, String.class);
+
+			JsonNode root = mapper.readTree(response.getBody());
+			JsonNode name = root.path("content");
+			// TODO : do i need this acces to content??
+
+			return Optional.of(mapper.treeToValue(name, CartContent.class));
+		} catch (RestClientException e) { // 404 or something like that.
+			e.printStackTrace();
+		} catch (JsonProcessingException e) { // whatever we received, it was no cart content.
+			e.printStackTrace();
+		}
+		return Optional.empty();
+	}
+
+	/**
+	 * 
+	 * @param productId
+	 * @return
+	 */
+	protected Optional<Product> getSingleProduct(String productId) {
+		String ressourceUrl = inventoryUrl + "/" + productId;
+		LOG.debug("get from " + ressourceUrl);
+
+		try {
+			ResponseEntity<String> response = template.getForEntity(ressourceUrl, String.class);
+
+			// important, because inventory api returns more fields than we need.
+			mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+
+			Product product = mapper.readValue(response.getBody(), Product.class);
+			product.setId(productId);
+
+			return Optional.of(product);
+		} catch (RestClientException e) { // 404 or something like that.
+			e.printStackTrace();
+		} catch (JsonProcessingException e) { // whatever we received, it was no cart content.
+			e.printStackTrace();
+		}
+		return Optional.empty();
+	}
+
+	/**
+	 * extract the id under which a resource can be found.
+	 * 
+	 * TODO find a better was to do this. there must be one.
+	 * 
+	 * @param node some parent node
+	 * @return the id
+	 */
+	private String getIdfromJson(JsonNode node) {
+		JsonNode link = node.findPath("href");
+		String s = link.asText();
+		String id = s.split("/")[s.split("/").length - 1];
+		return id;
+	}
+
+	/**
+	 * reserve units of product to be put into cart.
+	 * 
+	 * @param sessionId
+	 * @param productId
+	 * @param units
+	 * @throws TODO iff reservation failed
+	 */
+	public void makeReservations(String sessionId, String productId, Integer units) throws Exception {
+		// post reservation TODO
+		String ressourceUrl = inventoryUrl + "/reservation";
+		LOG.debug("get from " + ressourceUrl);
+
+		try {
+			ReservationRequest request = new ReservationRequest(productId, sessionId, units);
+			ResponseEntity<Void> inventoryResponse = template.postForEntity(ressourceUrl, request, Void.class);
+		} catch (RestClientException e) { // no reservation for what ever reason
+			e.printStackTrace();
+			throw new Exception(e); // TODO or something like that
+		}
+	}
 }

@@ -28,9 +28,16 @@ public class UIBackendController {
 		return service.getAllProducts();
 	}
 
-	@GetMapping("/add")
-	public void addItemToCart(HttpSession session, @RequestParam(value = "id", defaultValue = "foo") String id, @RequestParam(value = "units", defaultValue = "42") Integer units) {
-		service.addItemToCart(session.getId(), id, units);
+	@PostMapping("/add")
+	public void addItemToCart(HttpSession session, @RequestParam(value = "id", defaultValue = "foo") String id, @RequestParam(value = "units", defaultValue = "2") Integer units) {
+		try {
+			service.makeReservations(session.getId(), id, units);
+			service.addItemToCart(session.getId(), id, units);
+		} catch (Exception e) {
+			e.printStackTrace();
+			// return error....
+		}
+		// return success....
 	}
 
 	@PostMapping("/delete")
@@ -46,7 +53,7 @@ public class UIBackendController {
 
 	@GetMapping("/cart")
 	public List<Product> getCart(HttpSession session) {
-		return service.getCart(session.getId());
+		return service.getProductsInCart(session.getId());
 	}
 	
 	@PutMapping("/payment")
@@ -54,7 +61,7 @@ public class UIBackendController {
 		service.putPayment(session.getId(), paymentInfo);
 	}
 
-	@RequestMapping("/confirm")
+	@PostMapping("/confirm")
 	public void confirmOrder(HttpSession session) {
 		// TODO
 		service.confirmOrder(session.getId());
