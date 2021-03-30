@@ -1,4 +1,4 @@
-package de.unistuttgart.t2.uibackend.TODO;
+package de.unistuttgart.t2.uibackend;
 
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.context.annotation.Bean;

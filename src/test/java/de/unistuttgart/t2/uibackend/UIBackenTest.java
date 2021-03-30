@@ -22,7 +22,6 @@ import org.springframework.web.client.RestTemplate;
 
 import de.unistuttgart.t2.common.domain.CartContent;
 import de.unistuttgart.t2.common.domain.Product;
-import de.unistuttgart.t2.uibackend.TODO.TestContext;
 
 @ExtendWith(SpringExtension.class)
 @ContextConfiguration(classes = TestContext.class)
