@@ -8,17 +8,16 @@ import org.springframework.web.client.RestTemplate;
 import de.unistuttgart.t2.uibackend.UIBackendService;
 
 @Configuration
-@EnableAutoConfiguration
 public class TestContext {
-
-//	@Bean
-//	public UIBackendService backendService() {
-//		return new UIBackendService();
-//	}
 
 	@Bean
 	public RestTemplate template() {
 		return new RestTemplate ();
+	}
+	
+	@Bean
+	public UIBackendService service() {
+		return new UIBackendService("http://localhost:8080", "http://localhost:8081", "http://localhost:8082");
 	}
 
 	

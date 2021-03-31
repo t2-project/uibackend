@@ -10,6 +10,9 @@ public class Playground {
 
 	public static void main(String[] args) {
 		(new Playground()).test3();
+		Integer i = null;
+		int a = i;
+		System.out.println(a);
 	}
 	
 	public void test3() {

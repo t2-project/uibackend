@@ -14,8 +14,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import de.unistuttgart.t2.common.domain.PaymentInfo;
 import de.unistuttgart.t2.common.domain.Product;
+import de.unistuttgart.t2.common.domain.saga.CreditCardInfo;
 
 @RestController
 public class UIBackendController {
@@ -55,16 +55,15 @@ public class UIBackendController {
 	public List<Product> getCart(HttpSession session) {
 		return service.getProductsInCart(session.getId());
 	}
-	
-	@PutMapping("/payment")
-	public void putPayment(HttpSession session, @RequestBody PaymentInfo paymentInfo) {
-		service.putPayment(session.getId(), paymentInfo);
-	}
 
 	@PostMapping("/confirm")
-	public void confirmOrder(HttpSession session) {
-		// TODO
-		service.confirmOrder(session.getId());
+	public void confirmOrder(HttpSession session,
+		 @RequestParam(value = "cardNumber") String cardNumber,
+		 @RequestParam(value = "cardOwner") String cardOwner, 
+		 @RequestParam(value = "checksum") String checksum, 
+		 @RequestParam(value = "total") double total) {
+		
+		service.confirmOrder(session.getId(), cardNumber, cardOwner, checksum, total);
 	}
 
 	@GetMapping("/")

@@ -7,12 +7,10 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnitRunner;
-
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,10 +22,15 @@ import de.unistuttgart.t2.common.domain.CartContent;
 import de.unistuttgart.t2.common.domain.Product;
 
 @ExtendWith(SpringExtension.class)
-@ContextConfiguration(classes = TestContext.class)
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
 /**
  * Test UIBackendservice for responses. 
+ * 
+ * What i tried do to here: 
+ *  - look at service operations, that GET things from other services (inventory, cart) 
+ *  - fake the other services response
+ *  - and check that the backen service operations give me the correct object.  
+ * 
  * 
  * TODO : all special cases!
  * 
@@ -36,10 +39,10 @@ import de.unistuttgart.t2.common.domain.Product;
  */
 public class UIBackenTest {
 
-    @Mock
+    @Mock // mock the rest template
     private RestTemplate template;
 
-    @InjectMocks
+    @InjectMocks // inject the mocked rest template into service
     private UIBackendService service = new UIBackendService("http://localhost:8080/cart", "http://localhost:8082/inventory", null);
         
     @Test

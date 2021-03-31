@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestClientException;
@@ -23,9 +24,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import de.unistuttgart.t2.common.domain.CartContent;
-import de.unistuttgart.t2.common.domain.PaymentInfo;
 import de.unistuttgart.t2.common.domain.Product;
 import de.unistuttgart.t2.common.domain.ReservationRequest;
+import de.unistuttgart.t2.common.domain.saga.CreditCardInfo;
+import de.unistuttgart.t2.common.domain.saga.SagaRequest;
 
 public class UIBackendService {
 
@@ -37,11 +39,11 @@ public class UIBackendService {
 	private final ObjectMapper mapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES,
 			false); 
 
-	@Value("${t2.orchestrator.url}")
+	//@Value("${t2.orchestrator.url}")
 	private String orchestratorUrl;
-	@Value("${t2.cart.url}")
+	//@Value("${t2.cart.url}")
 	private String cartUrl;
-	@Value("${t2.inventory.url}")
+	//@Value("${t2.inventory.url}")
 	private String inventoryUrl;
 
 	@PostConstruct
@@ -54,7 +56,7 @@ public class UIBackendService {
 	public UIBackendService() {
 	}
 
-	// because tests.
+	// because tests. also because i moved the @value stuff to the configuration thing-y
 	public UIBackendService(String cartUrl, String inventoryUrl, String orchestratorUrl) {
 		this.cartUrl = cartUrl;
 		this.inventoryUrl = inventoryUrl;
@@ -179,23 +181,15 @@ public class UIBackendService {
 	 * @param sessionId   for identification
 	 * @param paymentInfo
 	 */
-	public void confirmOrder(String sessionId) {
-		String ressourceUrl = orchestratorUrl + "/order/" + sessionId;
+	public void confirmOrder(String cardNumber, String cardOwner, String checksum, String sessionId, double total) {
+		String ressourceUrl = orchestratorUrl + "/order";
 		LOG.debug("post to " + ressourceUrl);
 
-		ResponseEntity<Void> response = template.postForEntity(ressourceUrl, "", Void.class);
+		SagaRequest request = new SagaRequest(sessionId, cardNumber, cardOwner, checksum, total);
+		
+		ResponseEntity<Void> response = template.postForEntity(ressourceUrl, request, Void.class);
 
-		LOG.debug(response.getStatusCode().toString() + " - orchestrator accepted request :)");
-	}
-
-	/**
-	 * UHM... not sure whether i'll really use this??
-	 * 
-	 * @param sessionId
-	 * @param paymentInfo
-	 */
-	public void putPayment(String sessionId, PaymentInfo paymentInfo) {
-		// TODO
+		LOG.info(response.getStatusCode().toString() + " - orchestrator accepted request :)");
 	}
 
 	/**
@@ -277,7 +271,7 @@ public class UIBackendService {
 	 * @throws TODO iff reservation failed
 	 */
 	public void makeReservations(String sessionId, String productId, Integer units) throws Exception {
-		// post reservation TODO
+
 		String ressourceUrl = inventoryUrl + "/reservation";
 		LOG.debug("get from " + ressourceUrl);
 
