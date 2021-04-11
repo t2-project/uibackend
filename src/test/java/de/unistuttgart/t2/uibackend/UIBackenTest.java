@@ -18,6 +18,8 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.web.client.RestTemplate;
 
+import com.fasterxml.jackson.databind.jsonschema.JsonSerializableSchema;
+
 import de.unistuttgart.t2.common.domain.CartContent;
 import de.unistuttgart.t2.common.domain.Product;
 
@@ -29,7 +31,7 @@ import de.unistuttgart.t2.common.domain.Product;
  * What i tried do to here: 
  *  - look at service operations, that GET things from other services (inventory, cart) 
  *  - fake the other services response
- *  - and check that the backen service operations give me the correct object.  
+ *  - and check that the back end service operations give me the correct object.  
  * 
  * 
  * TODO : all special cases!
@@ -43,7 +45,7 @@ public class UIBackenTest {
     private RestTemplate template;
 
     @InjectMocks // inject the mocked rest template into service
-    private UIBackendService service = new UIBackendService("http://localhost:8080/cart", "http://localhost:8082/inventory", null);
+    private UIBackendService service = new UIBackendService(JSONs.cartUrl,JSONs.inventoryUrl, JSONs.orchestratorUrl, JSONs.reservationEndpoint);
         
     @Test
     public void getCartContentTest() {

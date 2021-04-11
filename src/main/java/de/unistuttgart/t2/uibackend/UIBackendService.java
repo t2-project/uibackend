@@ -26,9 +26,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import de.unistuttgart.t2.common.domain.CartContent;
 import de.unistuttgart.t2.common.domain.Product;
 import de.unistuttgart.t2.common.domain.ReservationRequest;
-import de.unistuttgart.t2.common.domain.saga.CreditCardInfo;
 import de.unistuttgart.t2.common.domain.saga.SagaRequest;
 
+/**
+ * collects data from other services. 
+ * 
+ * @author maumau
+ *
+ */
 public class UIBackendService {
 
 	@Autowired
@@ -39,43 +44,36 @@ public class UIBackendService {
 	private final ObjectMapper mapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES,
 			false); 
 
-	//@Value("${t2.orchestrator.url}")
+	// they have all the trailing '/' and stuff.
 	private String orchestratorUrl;
-	//@Value("${t2.cart.url}")
 	private String cartUrl;
-	//@Value("${t2.inventory.url}")
 	private String inventoryUrl;
 
-	@PostConstruct
-	public void init() {
-		if (orchestratorUrl.isEmpty() || cartUrl.isEmpty() || inventoryUrl.isEmpty()) {
-			throw new IllegalStateException("Missing URLS");
-		}
-	}
+	private String reservationEndpoint;
 
-	public UIBackendService() {
-	}
-
-	// because tests. also because i moved the @value stuff to the configuration thing-y
-	public UIBackendService(String cartUrl, String inventoryUrl, String orchestratorUrl) {
+	// because i moved the @value stuff to the configuration thing-y
+	public UIBackendService(String cartUrl, String inventoryUrl, String orchestratorUrl, String reservationEndpoint) {
 		this.cartUrl = cartUrl;
 		this.inventoryUrl = inventoryUrl;
 		this.orchestratorUrl = orchestratorUrl;
+		
+		//TODO some validation? like, make sure all the urls are valid and stuff like that 
 	}
 
 	/**
 	 * Get all products available at the store.
 	 * 
+	 * TODO : the generated endpoint does things with pages. currectly get the first twenty items only.
+	 * 
 	 * @return a list of all products available
 	 */
 	public List<Product> getAllProducts() {
-		String ressourceUrl = inventoryUrl + "/";
-		LOG.debug("get from " + ressourceUrl);
+		LOG.debug("get from " + inventoryUrl);
 
 		List<Product> rval = new ArrayList<>();
 
 		try {
-			ResponseEntity<String> response = template.getForEntity(ressourceUrl, String.class);
+			ResponseEntity<String> response = template.getForEntity(inventoryUrl, String.class);
 
 			JsonNode root = mapper.readTree(response.getBody());
 			JsonNode inventory = root.findPath("inventory");
@@ -86,7 +84,7 @@ public class UIBackendService {
 					p.setId(getIdfromJson(inventory));
 					rval.add(p);
 				} catch (JsonProcessingException e) {
-					e.printStackTrace(); // single malformed product
+					e.printStackTrace(); // single malformed product, continue with next one
 				}
 			}
 		} catch (RestClientException e) { // 404 or something like that.
@@ -108,7 +106,7 @@ public class UIBackendService {
 	 * @param units     number of units to be added
 	 */
 	public void addItemToCart(String sessionId, String productId, Integer units) {
-		String ressourceUrl = cartUrl + "/" + sessionId;
+		String ressourceUrl = cartUrl + sessionId;
 		LOG.debug("put to " + ressourceUrl);
 
 		Optional<CartContent> optCartContent = getCartContent(sessionId);
@@ -133,7 +131,7 @@ public class UIBackendService {
 	 * @param units     number of units to be deleted
 	 */
 	public void deleteItemFromCart(String sessionId, String productId, Integer units) {
-		String ressourceUrl = cartUrl + "/" + sessionId;
+		String ressourceUrl = cartUrl + sessionId;
 		LOG.debug("put to " + ressourceUrl);
 
 		Optional<CartContent> optCartContent = getCartContent(sessionId);
@@ -182,7 +180,7 @@ public class UIBackendService {
 	 * @param paymentInfo
 	 */
 	public void confirmOrder(String cardNumber, String cardOwner, String checksum, String sessionId, double total) {
-		String ressourceUrl = orchestratorUrl + "/order";
+		String ressourceUrl = orchestratorUrl;
 		LOG.debug("post to " + ressourceUrl);
 
 		SagaRequest request = new SagaRequest(sessionId, cardNumber, cardOwner, checksum, total);
@@ -201,7 +199,7 @@ public class UIBackendService {
 	 * @return content of cart iff it exists, empty optional otherwise
 	 */
 	protected Optional<CartContent> getCartContent(String sessionId) {
-		String ressourceUrl = cartUrl + "/" + sessionId;
+		String ressourceUrl = cartUrl + sessionId;
 		LOG.debug("get from " + ressourceUrl);
 
 		try {
@@ -226,7 +224,7 @@ public class UIBackendService {
 	 * @return
 	 */
 	protected Optional<Product> getSingleProduct(String productId) {
-		String ressourceUrl = inventoryUrl + "/" + productId;
+		String ressourceUrl = inventoryUrl + productId;
 		LOG.debug("get from " + ressourceUrl);
 
 		try {
@@ -272,7 +270,7 @@ public class UIBackendService {
 	 */
 	public void makeReservations(String sessionId, String productId, Integer units) throws Exception {
 
-		String ressourceUrl = inventoryUrl + "/reservation";
+		String ressourceUrl = inventoryUrl + reservationEndpoint;
 		LOG.debug("get from " + ressourceUrl);
 
 		try {

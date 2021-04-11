@@ -15,7 +15,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import de.unistuttgart.t2.common.domain.Product;
-import de.unistuttgart.t2.common.domain.saga.CreditCardInfo;
 
 @RestController
 public class UIBackendController {

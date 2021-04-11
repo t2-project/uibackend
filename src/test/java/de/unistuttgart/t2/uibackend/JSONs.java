@@ -21,8 +21,11 @@ public class JSONs {
 	public static String productId = "foo";
 	public static String anotherproductId = "foo2";
 	public static String sessionId = "bar";
+	public static String orchestratorUrl = "http://localhost:8083/order/";
 	public static String cartUrl = "http://localhost:8080/cart/";
 	public static String inventoryUrl = "http://localhost:8082/inventory/";
+	public static String reservationUrl = "http://localhost:8082/inventory/reservation/";
+	public static String reservationEndpoint = "reservation";
     
     public static String cartResponse =  "{\n"
     	    	+ "  \"content\" : {\n"

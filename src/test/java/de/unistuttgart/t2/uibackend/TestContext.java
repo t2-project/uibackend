@@ -1,13 +1,12 @@
 package de.unistuttgart.t2.uibackend;
 
-import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.web.client.RestTemplate;
 
-import de.unistuttgart.t2.uibackend.UIBackendService;
-
 @Configuration
+@Profile("test")
 public class TestContext {
 
 	@Bean
@@ -17,7 +16,7 @@ public class TestContext {
 	
 	@Bean
 	public UIBackendService service() {
-		return new UIBackendService("http://localhost:8080", "http://localhost:8081", "http://localhost:8082");
+		return new UIBackendService(JSONs.cartUrl,JSONs.inventoryUrl, JSONs.orchestratorUrl, JSONs.reservationEndpoint);
 	}
 
 	

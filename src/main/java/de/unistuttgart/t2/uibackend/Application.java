@@ -15,6 +15,8 @@ public class Application {
 	private String cartUrl;
 	@Value("${t2.inventory.url}")
 	private String inventoryUrl;
+	@Value("${t2.inventory.reservationendpoint}")
+	private String reservationEndpoint;
 
 
 	public static void main(String[] args) {
@@ -28,6 +30,6 @@ public class Application {
 
 	@Bean
 	public UIBackendService backendService() {
-		return new UIBackendService(cartUrl, inventoryUrl, orchestratorUrl);
+		return new UIBackendService(cartUrl, inventoryUrl, orchestratorUrl, reservationEndpoint);
 	}
 }
