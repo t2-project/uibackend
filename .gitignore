@@ -3,4 +3,5 @@
 .mvn/
 .project
 .settings/
-
+**/application.local.properties
+**/*.swp
