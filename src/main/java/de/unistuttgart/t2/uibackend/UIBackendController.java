@@ -16,9 +16,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import de.unistuttgart.t2.common.domain.CartContent;
-import de.unistuttgart.t2.common.domain.OrderRequest;
-import de.unistuttgart.t2.common.domain.Product;
+import de.unistuttgart.t2.common.CartContent;
+import de.unistuttgart.t2.common.OrderRequest;
+import de.unistuttgart.t2.common.Product;
 
 @RestController
 public class UIBackendController {

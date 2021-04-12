@@ -20,8 +20,8 @@ import org.springframework.web.client.RestTemplate;
 
 import com.fasterxml.jackson.databind.jsonschema.JsonSerializableSchema;
 
-import de.unistuttgart.t2.common.domain.CartContent;
-import de.unistuttgart.t2.common.domain.Product;
+import de.unistuttgart.t2.common.CartContent;
+import de.unistuttgart.t2.common.Product;
 
 @ExtendWith(SpringExtension.class)
 @ExtendWith(MockitoExtension.class)

@@ -16,8 +16,8 @@ import org.springframework.web.client.RestTemplate;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import de.unistuttgart.t2.common.domain.ReservationRequest;
-import de.unistuttgart.t2.common.domain.saga.SagaRequest;
+import de.unistuttgart.t2.common.ReservationRequest;
+import de.unistuttgart.t2.common.saga.SagaRequest;
 
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.*;

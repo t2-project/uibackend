@@ -24,10 +24,10 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import de.unistuttgart.t2.common.domain.CartContent;
-import de.unistuttgart.t2.common.domain.Product;
-import de.unistuttgart.t2.common.domain.ReservationRequest;
-import de.unistuttgart.t2.common.domain.saga.SagaRequest;
+import de.unistuttgart.t2.common.CartContent;
+import de.unistuttgart.t2.common.Product;
+import de.unistuttgart.t2.common.ReservationRequest;
+import de.unistuttgart.t2.common.saga.SagaRequest;
 
 /**
  * collects data from other services. 
