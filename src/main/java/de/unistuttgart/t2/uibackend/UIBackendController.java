@@ -1,7 +1,9 @@
 package de.unistuttgart.t2.uibackend;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import javax.servlet.http.HttpSession;
 
@@ -14,6 +16,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import de.unistuttgart.t2.common.domain.CartContent;
+import de.unistuttgart.t2.common.domain.OrderRequest;
 import de.unistuttgart.t2.common.domain.Product;
 
 @RestController
@@ -22,32 +26,40 @@ public class UIBackendController {
 	@Autowired
 	private UIBackendService service;
 
-	@GetMapping("/all")
+	@GetMapping("/products/all")
 	public List<Product> getAllProducts() {
 		return service.getAllProducts();
 	}
 
-	@PostMapping("/add")
-	public void addItemToCart(HttpSession session, @RequestParam(value = "id", defaultValue = "foo") String id, @RequestParam(value = "units", defaultValue = "2") Integer units) {
-		try {
-			service.makeReservations(session.getId(), id, units);
-			service.addItemToCart(session.getId(), id, units);
-		} catch (Exception e) {
-			e.printStackTrace();
-			// return error....
+	@PostMapping("/products/add")
+	public List<Product> addItemsToCart(HttpSession session, @RequestBody CartContent products) {
+		List<Product> successfullyAddedProducts = new ArrayList<>();
+
+		for (Entry<String, Integer> product : products.getContent().entrySet()) {
+			try {
+				// contact inventory first, cause i'd rather have a dangling reservation than
+				// thing in the cart that are not backed with reservations
+				Product addedProduct = service.makeReservations(session.getId(), product.getKey(), product.getValue());
+				service.addItemToCart(session.getId(), product.getKey(), product.getValue());
+				successfullyAddedProducts.add(addedProduct);
+
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
-		// return success....
+		return successfullyAddedProducts;
 	}
 
-	@PostMapping("/delete")
-	public String deleteItemFromCart(HttpSession session, @RequestBody Map<String, Integer> products) {
-		// get blob
-		String productId = products.keySet().iterator().next();
-		Integer units = products.get(productId);
-
-		service.deleteItemFromCart(session.getId(), productId, units);
-
-		return products.toString();
+	@PostMapping("/products/delete")
+	public void deleteItemsFromCart(HttpSession session, @RequestBody CartContent products) {
+		// might leave dangling reservations :/
+		for (Entry<String, Integer> product : products.getContent().entrySet()) {
+			try {
+				service.deleteItemFromCart(session.getId(), product.getKey(), product.getValue());
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
 	}
 
 	@GetMapping("/cart")
@@ -56,17 +68,13 @@ public class UIBackendController {
 	}
 
 	@PostMapping("/confirm")
-	public void confirmOrder(HttpSession session,
-		 @RequestParam(value = "cardNumber") String cardNumber,
-		 @RequestParam(value = "cardOwner") String cardOwner, 
-		 @RequestParam(value = "checksum") String checksum, 
-		 @RequestParam(value = "total") double total) {
+	public void confirmOrder(HttpSession session, @RequestBody OrderRequest request) {
 		
-		service.confirmOrder(session.getId(), cardNumber, cardOwner, checksum, total);
+		service.confirmOrder(session.getId(), request.getCardNumber(), request.getCardOwner(), request.getChecksum());
 	}
 
 	@GetMapping("/")
 	public String index() {
-		return "Greetings from Controller";
+		return "Greetings from UI Backend :)";
 	}
 }

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
 
@@ -145,7 +146,7 @@ public class UIBackendService {
 				cartContent.getContent().remove(productId);
 			}
 			template.put(ressourceUrl, cartContent);
-		}
+		} 
 	}
 
 	/**
@@ -176,10 +177,15 @@ public class UIBackendService {
 	/**
 	 * start the saga to process the order.
 	 * 
-	 * @param sessionId   for identification
-	 * @param paymentInfo
+	 * @param cardNumber
+	 * @param cardOwner
+	 * @param checksum
+	 * @param sessionId
 	 */
-	public void confirmOrder(String cardNumber, String cardOwner, String checksum, String sessionId, double total) {
+	public void confirmOrder(String cardNumber, String cardOwner, String checksum, String sessionId) {
+		
+		int total = getTotal(sessionId);
+
 		String ressourceUrl = orchestratorUrl;
 		LOG.debug("post to " + ressourceUrl);
 
@@ -259,6 +265,28 @@ public class UIBackendService {
 		String id = s.split("/")[s.split("/").length - 1];
 		return id;
 	}
+	
+	/**
+	 * 
+	 * calculate total for a a session's cart
+	 * 
+	 * @param sessionId identifies session to get total for
+	 * @return the total
+	 */
+	private int getTotal(String sessionId) {
+		CartContent cart = getCartContent(sessionId).orElse(new CartContent());
+		
+		int total = 0;
+		
+		for (String productId : cart.getProductIds()) {
+			Optional<Product> product = getSingleProduct(productId);
+			if (product.isPresent()) {
+				total += product.get().getPrice() * cart.getUnits(productId);
+			}
+		}
+		return total;
+	}
+	
 
 	/**
 	 * reserve units of product to be put into cart.
@@ -266,16 +294,18 @@ public class UIBackendService {
 	 * @param sessionId
 	 * @param productId
 	 * @param units
+	 * @return the product the reservation was made for
 	 * @throws TODO iff reservation failed
 	 */
-	public void makeReservations(String sessionId, String productId, Integer units) throws Exception {
+	public Product makeReservations(String sessionId, String productId, Integer units) throws Exception {
 
 		String ressourceUrl = inventoryUrl + reservationEndpoint;
-		LOG.debug("get from " + ressourceUrl);
+		LOG.debug("post to " + ressourceUrl);
 
 		try {
 			ReservationRequest request = new ReservationRequest(productId, sessionId, units);
-			ResponseEntity<Void> inventoryResponse = template.postForEntity(ressourceUrl, request, Void.class);
+			ResponseEntity<Product> inventoryResponse = template.postForEntity(ressourceUrl, request, Product.class);
+			return inventoryResponse.getBody();
 		} catch (RestClientException e) { // no reservation for what ever reason
 			e.printStackTrace();
 			throw new Exception(e); // TODO or something like that
