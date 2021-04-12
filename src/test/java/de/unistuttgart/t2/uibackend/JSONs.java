@@ -24,8 +24,8 @@ public class JSONs {
 	public static String orchestratorUrl = "http://localhost:8083/order/";
 	public static String cartUrl = "http://localhost:8080/cart/";
 	public static String inventoryUrl = "http://localhost:8082/inventory/";
-	public static String reservationUrl = "http://localhost:8082/inventory/reservation/";
-	public static String reservationEndpoint = "reservation";
+	public static String reservationEndpoint = "reservation/";
+	public static String reservationUrl = inventoryUrl + reservationEndpoint;
     
     public static String cartResponse =  "{\n"
     	    	+ "  \"content\" : {\n"
@@ -40,6 +40,21 @@ public class JSONs {
     	    	+ "    }\n"
     	    	+ "  }\n"
     	    	+ "}";
+    
+    public static String cartResponseMulti =  "{\n"
+	    	+ "  \"content\" : {\n"
+	    	+ "    \"" + productId + "\" : 42,\n"
+	    	+ "    \"" + anotherproductId + "\" : 3\n"
+	    	+ "  },\n"
+	    	+ "  \"_links\" : {\n"
+	    	+ "    \"self\" : {\n"
+	    	+ "      \"href\" : \""+ cartUrl + sessionId + "\"\n"
+	    	+ "    },\n"
+	    	+ "    \"cart\" : {\n"
+	    	+ "      \"href\" : \""+ cartUrl + sessionId + "\"\n"
+	    	+ "    }\n"
+	    	+ "  }\n"
+	    	+ "}";
     	
     public static String inventoryResponse = "{\n"
     			+ "  \"name\" : \"name\",\n"
@@ -76,7 +91,7 @@ public class JSONs {
     			+ "}";
     
 
-	public static String inventoryresponsefoo = "{\n"
+	public static String inventoryresponseAllProducts = "{\n"
 			+ "  \"_embedded\" : {\n"
 			+ "    \"inventory\" : [ " + inventoryResponse + "," +  anotherInventoryResponse + " ]\n"
 			+ "  },\n"

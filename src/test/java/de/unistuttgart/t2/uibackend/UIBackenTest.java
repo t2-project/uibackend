@@ -115,7 +115,7 @@ public class UIBackenTest {
     @Test
     public void getAllProductsTest() {
     	//setup inventory responses
-    	ResponseEntity<String> entity = new ResponseEntity(JSONs.inventoryresponsefoo, HttpStatus.OK);
+    	ResponseEntity<String> entity = new ResponseEntity(JSONs.inventoryresponseAllProducts, HttpStatus.OK);
         Mockito
           .when((template.getForEntity(JSONs.inventoryUrl, String.class))) // no id, we want ALL.
           .thenReturn(entity);
