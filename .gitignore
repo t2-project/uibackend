@@ -5,3 +5,4 @@
 .settings/
 **/application.local.properties
 **/*.swp
+**/*.log
