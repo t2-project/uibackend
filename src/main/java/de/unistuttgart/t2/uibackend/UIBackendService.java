@@ -57,6 +57,7 @@ public class UIBackendService {
 		this.cartUrl = cartUrl;
 		this.inventoryUrl = inventoryUrl;
 		this.orchestratorUrl = orchestratorUrl;
+		this.reservationEndpoint = reservationEndpoint;
 		
 		//TODO some validation? like, make sure all the urls are valid and stuff like that 
 	}
