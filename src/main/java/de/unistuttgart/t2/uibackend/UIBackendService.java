@@ -152,7 +152,7 @@ public class UIBackendService {
 	}
 	
 	/**
-	 * Delete entire cart.
+	 * Delete entire cart for a session.
 	 * 
 	 * @param sessionId for identification
 	 */
@@ -196,7 +196,9 @@ public class UIBackendService {
 	 * @param checksum
 	 * @param sessionId
 	 */
-	public void confirmOrder(String cardNumber, String cardOwner, String checksum, String sessionId) {
+	public void confirmOrder(String sessionId, String cardNumber, String cardOwner, String checksum) {
+		
+		// TODO : don't place order if cart is empty. 
 		
 		int total = getTotal(sessionId);
 
