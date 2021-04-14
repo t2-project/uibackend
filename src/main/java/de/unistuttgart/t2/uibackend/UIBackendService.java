@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestClientException;
@@ -115,7 +116,7 @@ public class UIBackendService {
 
 		if (optCartContent.isPresent()) {
 			CartContent cartContent = optCartContent.get();
-			cartContent.getContent().put(productId, units);
+			cartContent.getContent().put(productId, units + cartContent.getUnits(productId));
 			template.put(ressourceUrl, cartContent);
 
 		} else {
@@ -148,6 +149,18 @@ public class UIBackendService {
 			}
 			template.put(ressourceUrl, cartContent);
 		} 
+	}
+	
+	/**
+	 * Delete entire cart.
+	 * 
+	 * @param sessionId for identification
+	 */
+	public void deleteCart(String sessionId) {
+		String ressourceUrl = cartUrl + sessionId;
+		LOG.debug("delete to " + ressourceUrl);
+
+		template.delete(ressourceUrl); 
 	}
 
 	/**
@@ -193,8 +206,12 @@ public class UIBackendService {
 		SagaRequest request = new SagaRequest(sessionId, cardNumber, cardOwner, checksum, total);
 		
 		ResponseEntity<Void> response = template.postForEntity(ressourceUrl, request, Void.class);
-
-		LOG.info(response.getStatusCode().toString() + " - orchestrator accepted request :)");
+		
+		if (response.getStatusCode() == HttpStatus.ACCEPTED) {
+			LOG.info(response.getStatusCode().toString() + " - orchestrator accepted request :)");			
+		} else {
+			LOG.info(response.getStatusCode().toString() + " - orchestrator did not accept request :(");
+		}
 	}
 
 	/**
@@ -218,9 +235,11 @@ public class UIBackendService {
 
 			return Optional.of(mapper.treeToValue(name, CartContent.class));
 		} catch (RestClientException e) { // 404 or something like that.
-			e.printStackTrace();
+			LOG.info(e.getMessage());
+			//e.printStackTrace();
 		} catch (JsonProcessingException e) { // whatever we received, it was no cart content.
-			e.printStackTrace();
+			LOG.info(e.getMessage());
+			//e.printStackTrace();
 		}
 		return Optional.empty();
 	}

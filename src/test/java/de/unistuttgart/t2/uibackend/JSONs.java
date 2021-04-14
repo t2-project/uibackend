@@ -27,6 +27,12 @@ public class JSONs {
 	public static String reservationEndpoint = "reservation/";
 	public static String reservationUrl = inventoryUrl + reservationEndpoint;
     
+	public static String updatedCartResponse =  "{\n"
+	    	+ "  \"content\" : {\n"
+	    	+ "    \"" + productId + "\" : 43\n"
+	    	+ "  }"
+	    	+ "}";
+	
     public static String cartResponse =  "{\n"
     	    	+ "  \"content\" : {\n"
     	    	+ "    \"" + productId + "\" : 42\n"

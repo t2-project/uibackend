@@ -142,6 +142,8 @@ public class UIBackendRequestTest {
 
 		mockServer.expect(ExpectedCount.once(), requestTo(cartUrl + sessionId))
 			.andExpect(method(HttpMethod.PUT))
+			.andExpect(content().contentType(MediaType.APPLICATION_JSON))
+			.andExpect(content().json(updatedCartResponse))
 			.andRespond(withStatus(HttpStatus.OK));
 		
 

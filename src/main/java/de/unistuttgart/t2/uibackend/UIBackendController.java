@@ -70,6 +70,9 @@ public class UIBackendController {
 	@PostMapping("/confirm")
 	public void confirmOrder(HttpSession session, @RequestBody OrderRequest request) {
 		service.confirmOrder(session.getId(), request.getCardNumber(), request.getCardOwner(), request.getChecksum());
+		service.deleteCart(session.getId());
+		// session stops after order is placed.
+		session.invalidate();
 	}
 
 	@GetMapping("/")
