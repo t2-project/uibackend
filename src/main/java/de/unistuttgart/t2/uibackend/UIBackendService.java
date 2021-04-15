@@ -89,7 +89,7 @@ public class UIBackendService {
 			for (JsonNode node : inventory) {
 				try {
 					Product p = mapper.treeToValue(node, Product.class);
-					p.setId(getIdfromJson(inventory));
+					p.setId(getIdfromJson(node));
 					rval.add(p);
 				} catch (JsonProcessingException e) {
 					e.printStackTrace(); // single malformed product, continue with next one
