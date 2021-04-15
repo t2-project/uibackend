@@ -1,4 +1,4 @@
-package de.unistuttgart.t2.uibackend.restdetails;
+package de.unistuttgart.t2.uibackend.exceptions;
 
 import java.io.IOException;
 

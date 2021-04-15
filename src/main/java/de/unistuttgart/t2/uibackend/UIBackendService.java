@@ -8,6 +8,7 @@ import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
 
+import org.apache.logging.log4j.util.StringBuilderFormattable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,9 +30,11 @@ import de.unistuttgart.t2.common.CartContent;
 import de.unistuttgart.t2.common.Product;
 import de.unistuttgart.t2.common.ReservationRequest;
 import de.unistuttgart.t2.common.saga.SagaRequest;
+import de.unistuttgart.t2.uibackend.exceptions.OrderNotPlacedException;
+import de.unistuttgart.t2.uibackend.exceptions.ReservationFailedException;
 
 /**
- * collects data from other services. 
+ * collects data from other services.
  * 
  * @author maumau
  *
@@ -42,9 +45,9 @@ public class UIBackendService {
 	RestTemplate template;
 
 	private final Logger LOG = LoggerFactory.getLogger(getClass());
-	
+
 	private final ObjectMapper mapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES,
-			false); 
+			false);
 
 	// they have all the trailing '/' and stuff.
 	private String orchestratorUrl;
@@ -59,14 +62,16 @@ public class UIBackendService {
 		this.inventoryUrl = inventoryUrl;
 		this.orchestratorUrl = orchestratorUrl;
 		this.reservationEndpoint = reservationEndpoint;
-		
-		//TODO some validation? like, make sure all the urls are valid and stuff like that 
+
+		// TODO some validation? like, make sure all the urls are valid and stuff like
+		// that
 	}
 
 	/**
 	 * Get all products available at the store.
 	 * 
-	 * TODO : the generated endpoint does things with pages. currectly get the first twenty items only.
+	 * TODO : the generated endpoint does things with pages. currectly get the first
+	 * twenty items only.
 	 * 
 	 * @return a list of all products available
 	 */
@@ -108,19 +113,23 @@ public class UIBackendService {
 	 * @param productId id of product to be added
 	 * @param units     number of units to be added
 	 */
-	public void addItemToCart(String sessionId, String productId, Integer units) {
+	public void addItemToCart(String sessionId, String productId, Integer units) throws ReservationFailedException {
 		String ressourceUrl = cartUrl + sessionId;
 		LOG.debug("put to " + ressourceUrl);
 
 		Optional<CartContent> optCartContent = getCartContent(sessionId);
 
-		if (optCartContent.isPresent()) {
-			CartContent cartContent = optCartContent.get();
-			cartContent.getContent().put(productId, units + cartContent.getUnits(productId));
-			template.put(ressourceUrl, cartContent);
+		try {
+			if (optCartContent.isPresent()) {
+				CartContent cartContent = optCartContent.get();
+				cartContent.getContent().put(productId, units + cartContent.getUnits(productId));
+				template.put(ressourceUrl, cartContent);
 
-		} else {
-			template.put(ressourceUrl, new CartContent(Map.of(productId, units)));
+			} else {
+				template.put(ressourceUrl, new CartContent(Map.of(productId, units)));
+			}
+		} catch (RestClientException e) {
+			throw new ReservationFailedException(String.format("Could not add %d units of product %s to cart.", units, productId));
 		}
 	}
 
@@ -148,9 +157,9 @@ public class UIBackendService {
 				cartContent.getContent().remove(productId);
 			}
 			template.put(ressourceUrl, cartContent);
-		} 
+		}
 	}
-	
+
 	/**
 	 * Delete entire cart for a session.
 	 * 
@@ -160,7 +169,11 @@ public class UIBackendService {
 		String ressourceUrl = cartUrl + sessionId;
 		LOG.debug("delete to " + ressourceUrl);
 
-		template.delete(ressourceUrl); 
+		try {
+			template.delete(ressourceUrl);
+		} catch (RestClientException e) { // 404 or something like that.
+			LOG.info(e.getMessage());
+		}
 	}
 
 	/**
@@ -189,28 +202,33 @@ public class UIBackendService {
 	}
 
 	/**
-	 * start the saga to process the order.
+	 * telll orchestrator to start the saga for this session.
 	 * 
+	 * @param sessionId
 	 * @param cardNumber
 	 * @param cardOwner
 	 * @param checksum
-	 * @param sessionId
 	 */
-	public void confirmOrder(String sessionId, String cardNumber, String cardOwner, String checksum) {
-		
-		// TODO : don't place order if cart is empty. 
-		
+	public void confirmOrder(String sessionId, String cardNumber, String cardOwner, String checksum) throws OrderNotPlacedException {
+		// is it more reasonable to get total from cart service, or is it more
+		// reasonable to pass the total from the frontend (where it was displyed and
+		// therefore is known) ??
+
 		int total = getTotal(sessionId);
+		
+		if (total <= 0) {
+			throw new OrderNotPlacedException(String.format("No Order placed for session %s. cart is either empty or not available. ", sessionId));
+		}
 
 		String ressourceUrl = orchestratorUrl;
 		LOG.debug("post to " + ressourceUrl);
 
 		SagaRequest request = new SagaRequest(sessionId, cardNumber, cardOwner, checksum, total);
-		
+
 		ResponseEntity<Void> response = template.postForEntity(ressourceUrl, request, Void.class);
-		
+
 		if (response.getStatusCode() == HttpStatus.ACCEPTED) {
-			LOG.info(response.getStatusCode().toString() + " - orchestrator accepted request :)");			
+			LOG.info(response.getStatusCode().toString() + " - orchestrator accepted request :)");
 		} else {
 			LOG.info(response.getStatusCode().toString() + " - orchestrator did not accept request :(");
 		}
@@ -238,18 +256,19 @@ public class UIBackendService {
 			return Optional.of(mapper.treeToValue(name, CartContent.class));
 		} catch (RestClientException e) { // 404 or something like that.
 			LOG.info(e.getMessage());
-			//e.printStackTrace();
+			// e.printStackTrace();
 		} catch (JsonProcessingException e) { // whatever we received, it was no cart content.
 			LOG.info(e.getMessage());
-			//e.printStackTrace();
+			// e.printStackTrace();
 		}
 		return Optional.empty();
 	}
 
 	/**
+	 * retrieve product from inventory. 
 	 * 
-	 * @param productId
-	 * @return
+	 * @param productId id of retrieved product
+	 * @return product with given id iff it exists in inventory
 	 */
 	protected Optional<Product> getSingleProduct(String productId) {
 		String ressourceUrl = inventoryUrl + productId;
@@ -287,28 +306,30 @@ public class UIBackendService {
 		String id = s.split("/")[s.split("/").length - 1];
 		return id;
 	}
-	
+
 	/**
-	 * 
 	 * calculate total for a a session's cart
+	 * 
+	 * depends on cart service to get the cart content and depends on inventory to get the price per unit.
+	 * if connecting to either fails,  returns 0. 
 	 * 
 	 * @param sessionId identifies session to get total for
 	 * @return the total
 	 */
 	private int getTotal(String sessionId) {
 		CartContent cart = getCartContent(sessionId).orElse(new CartContent());
-		
+
 		int total = 0;
-		
+
 		for (String productId : cart.getProductIds()) {
 			Optional<Product> product = getSingleProduct(productId);
-			if (product.isPresent()) {
-				total += product.get().getPrice() * cart.getUnits(productId);
+			if (product.isEmpty()) {
+				return 0;
 			}
+			total += product.get().getPrice() * cart.getUnits(productId);
 		}
 		return total;
 	}
-	
 
 	/**
 	 * reserve units of product to be put into cart.
@@ -319,7 +340,8 @@ public class UIBackendService {
 	 * @return the product the reservation was made for
 	 * @throws TODO iff reservation failed
 	 */
-	public Product makeReservations(String sessionId, String productId, Integer units) throws Exception {
+	public Product makeReservations(String sessionId, String productId, Integer units)
+			throws ReservationFailedException {
 
 		String ressourceUrl = inventoryUrl + reservationEndpoint;
 		LOG.debug("post to " + ressourceUrl);
@@ -329,8 +351,9 @@ public class UIBackendService {
 			ResponseEntity<Product> inventoryResponse = template.postForEntity(ressourceUrl, request, Product.class);
 			return inventoryResponse.getBody();
 		} catch (RestClientException e) { // no reservation for what ever reason
-			e.printStackTrace();
-			throw new Exception(e); // TODO or something like that
+			LOG.info(e.getMessage());
+			throw new ReservationFailedException(
+					String.format("Reservation for session %s failed : %s, %d", sessionId, productId, units));
 		}
 	}
 }

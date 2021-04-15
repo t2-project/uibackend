@@ -80,8 +80,7 @@ public class UIBackendRequestTest {
 				.andExpect(content().json(mapper.writeValueAsString(reqest))).andRespond(withStatus(HttpStatus.OK));
 
 		// execute
-		service.confirmOrder(reqest.getCardNumber(), reqest.getCardOwner(), reqest.getChecksum(),
-				reqest.getSessionId());
+		service.confirmOrder(reqest.getSessionId(), reqest.getCardNumber(), reqest.getCardOwner(), reqest.getChecksum());
 		mockServer.verify();
 	}
 

@@ -4,21 +4,28 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpSession;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 
 import de.unistuttgart.t2.common.CartContent;
 import de.unistuttgart.t2.common.OrderRequest;
 import de.unistuttgart.t2.common.Product;
+import de.unistuttgart.t2.uibackend.exceptions.OrderNotPlacedException;
+import de.unistuttgart.t2.uibackend.exceptions.ReservationFailedException;
 
 @RestController
 public class UIBackendController {
@@ -32,8 +39,10 @@ public class UIBackendController {
 	}
 
 	@PostMapping("/products/add")
-	public List<Product> addItemsToCart(HttpSession session, @RequestBody CartContent products) {
+	public List<Product> addItemsToCart(HttpSession session, @RequestBody CartContent products) throws ReservationFailedException {
 		List<Product> successfullyAddedProducts = new ArrayList<>();
+		
+		StringBuilder failures = new StringBuilder(); 
 
 		for (Entry<String, Integer> product : products.getContent().entrySet()) {
 			try {
@@ -43,10 +52,15 @@ public class UIBackendController {
 				service.addItemToCart(session.getId(), product.getKey(), product.getValue());
 				successfullyAddedProducts.add(addedProduct);
 
-			} catch (Exception e) {
-				e.printStackTrace();
+			} catch (ReservationFailedException e) {
+				failures.append(e.getMessage()).append("\n");
 			}
 		}
+		
+		if (failures.length() > 0) {
+			throw new ReservationFailedException(failures.toString());
+		}
+		
 		return successfullyAddedProducts;
 	}
 
@@ -68,7 +82,7 @@ public class UIBackendController {
 	}
 
 	@PostMapping("/confirm")
-	public void confirmOrder(HttpSession session, @RequestBody OrderRequest request) {
+	public void confirmOrder(HttpSession session, @RequestBody OrderRequest request) throws OrderNotPlacedException {
 		service.confirmOrder(session.getId(), request.getCardNumber(), request.getCardOwner(), request.getChecksum());
 		service.deleteCart(session.getId());
 		// session stops after order is placed.
@@ -78,5 +92,17 @@ public class UIBackendController {
 	@GetMapping("/")
 	public String index() {
 		return "Greetings from UI Backend :)";
+	}
+
+	@ExceptionHandler(OrderNotPlacedException.class)
+	@ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+	public ResponseEntity<String> handleOrderNotPlacesException(OrderNotPlacedException exception) {
+		return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(exception.getMessage());
+	}
+	
+	@ExceptionHandler(ReservationFailedException.class)
+	@ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+	public ResponseEntity<String> handleReservationFailedException(ReservationFailedException exception) {
+		return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(exception.getMessage());
 	}
 }
