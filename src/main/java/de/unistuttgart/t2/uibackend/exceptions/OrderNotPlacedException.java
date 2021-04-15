@@ -1,8 +1,5 @@
 package de.unistuttgart.t2.uibackend.exceptions;
 
-import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.ResponseStatus;
-
 /**
  * Indicates that an Order was not placed.
  * 
