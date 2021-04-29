@@ -4,5 +4,7 @@
 .project
 .settings/
 **/application.local.properties
+**/*local.yml
+**/*local.yaml
 **/*.swp
 **/*.log
