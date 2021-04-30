@@ -1,6 +1,6 @@
 package de.unistuttgart.t2.uibackend;
 
-import static de.unistuttgart.t2.uibackend.JSONs.*;
+import static de.unistuttgart.t2.uibackend.supplicants.JSONs.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -22,11 +22,12 @@ import org.springframework.web.client.RestTemplate;
 
 import de.unistuttgart.t2.common.CartContent;
 import de.unistuttgart.t2.common.Product;
+import de.unistuttgart.t2.uibackend.supplicants.JSONs;
 
 @ExtendWith(SpringExtension.class)
 @ExtendWith(MockitoExtension.class)
 /**
- * Test UIBackendservice for responses.
+ * Test whether UIBackendservice handles all responses correctly.
  * 
  * What i tried do to here: - look at service operations, that GET things from
  * other services (inventory, cart) - fake the other services response - and
@@ -38,7 +39,7 @@ import de.unistuttgart.t2.common.Product;
  * @author maumau
  *
  */
-public class UIBackenTest {
+public class UIBackenResponseTest {
 
 	@Mock // mock the rest template
 	private RestTemplate template;

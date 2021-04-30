@@ -71,6 +71,13 @@
 			<artifactId>mockito-junit-jupiter</artifactId>
 			<version>3.6.0</version>
 		</dependency>
+
+		<!-- cricuitbreaker and retry and stuff -->
+		<dependency>
+			<groupId>io.github.resilience4j</groupId>
+			<artifactId>resilience4j-retry</artifactId>
+			<version>1.7.0</version>
+		</dependency>
 	</dependencies>
 
 	<build>

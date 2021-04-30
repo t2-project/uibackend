@@ -1,9 +1,11 @@
-package de.unistuttgart.t2.uibackend;
+package de.unistuttgart.t2.uibackend.supplicants;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.web.client.RestTemplate;
+
+import de.unistuttgart.t2.uibackend.UIBackendService;
 
 @Configuration
 @Profile("test")

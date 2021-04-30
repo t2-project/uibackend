@@ -18,13 +18,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import de.unistuttgart.t2.common.ReservationRequest;
 import de.unistuttgart.t2.common.saga.SagaRequest;
+import de.unistuttgart.t2.uibackend.supplicants.JSONs;
+import de.unistuttgart.t2.uibackend.supplicants.TestContext;
 
+import static de.unistuttgart.t2.uibackend.supplicants.JSONs.*;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
 
-import static de.unistuttgart.t2.uibackend.JSONs.*;
-
 /**
+ * 
+ * Test whether UIBackendservice makes the right requests.
  * 
  * What i am doing here: 
  * 	- set up the mock server to expect a certain request 

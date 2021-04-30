@@ -24,6 +24,7 @@ import org.springframework.http.ResponseEntity;
 import de.unistuttgart.t2.common.CartContent;
 import de.unistuttgart.t2.common.OrderRequest;
 import de.unistuttgart.t2.common.Product;
+import de.unistuttgart.t2.uibackend.exceptions.CartInteractionFailedException;
 import de.unistuttgart.t2.uibackend.exceptions.OrderNotPlacedException;
 import de.unistuttgart.t2.uibackend.exceptions.ReservationFailedException;
 
@@ -57,7 +58,8 @@ public class UIBackendController {
 			}
 		}
 		
-		if (failures.length() > 0) {
+		// unless all reservations fail, we'll just ignore the failures :x
+		if (successfullyAddedProducts.isEmpty()) {
 			throw new ReservationFailedException(failures.toString());
 		}
 		
@@ -103,6 +105,12 @@ public class UIBackendController {
 	@ExceptionHandler(ReservationFailedException.class)
 	@ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
 	public ResponseEntity<String> handleReservationFailedException(ReservationFailedException exception) {
+		return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(exception.getMessage());
+	}
+	
+	@ExceptionHandler(CartInteractionFailedException.class)
+	@ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+	public ResponseEntity<String> handleCartInteractionFailedException(CartInteractionFailedException exception) {
 		return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(exception.getMessage());
 	}
 }
