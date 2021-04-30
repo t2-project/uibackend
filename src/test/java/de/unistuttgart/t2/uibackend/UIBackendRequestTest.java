@@ -27,6 +27,8 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 
 /**
  * 
+ * Test whether UIBackendservice makes the right requests.
+ * 
  * What i am doing here: 
  * 	- set up the mock server to expect a certain request 
  *  - execute a service operation that calls some other service 
