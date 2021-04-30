@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
@@ -30,8 +31,12 @@ import de.unistuttgart.t2.common.CartContent;
 import de.unistuttgart.t2.common.Product;
 import de.unistuttgart.t2.common.ReservationRequest;
 import de.unistuttgart.t2.common.saga.SagaRequest;
+import de.unistuttgart.t2.uibackend.exceptions.CartInteractionFailedException;
 import de.unistuttgart.t2.uibackend.exceptions.OrderNotPlacedException;
 import de.unistuttgart.t2.uibackend.exceptions.ReservationFailedException;
+import io.github.resilience4j.retry.Retry;
+import io.github.resilience4j.retry.RetryConfig;
+import io.github.resilience4j.retry.RetryRegistry;
 
 /**
  * collects data from other services.
@@ -40,7 +45,7 @@ import de.unistuttgart.t2.uibackend.exceptions.ReservationFailedException;
  *
  */
 public class UIBackendService {
-
+	
 	@Autowired
 	RestTemplate template;
 
@@ -55,6 +60,11 @@ public class UIBackendService {
 	private String inventoryUrl;
 
 	private String reservationEndpoint;
+	
+	// retry stuff
+	RetryConfig config = RetryConfig.custom().maxAttempts(2).build();
+	RetryRegistry registry = RetryRegistry.of(config);
+	Retry retry = registry.retry("why_doe_a_retry_need_a_name?");
 
 	// because i moved the @value stuff to the configuration thing-y
 	public UIBackendService(String cartUrl, String inventoryUrl, String orchestratorUrl, String reservationEndpoint) {
@@ -81,7 +91,7 @@ public class UIBackendService {
 		List<Product> rval = new ArrayList<>();
 
 		try {
-			ResponseEntity<String> response = template.getForEntity(inventoryUrl, String.class);
+			ResponseEntity<String> response = Retry.decorateSupplier(retry, () -> template.getForEntity(inventoryUrl, String.class)).get(); 
 
 			JsonNode root = mapper.readTree(response.getBody());
 			JsonNode inventory = root.findPath("inventory");
@@ -137,26 +147,33 @@ public class UIBackendService {
 	 * Delete units of product from a users shopping cart.
 	 * 
 	 * If units of product decrease to zero or less, remove product from cart.
+	 * If the no such product is in cart, do nothing
 	 * 
 	 * @param sessionId for identification
 	 * @param productId id of product to be deleted
 	 * @param units     number of units to be deleted
 	 */
-	public void deleteItemFromCart(String sessionId, String productId, Integer units) {
+	public void deleteItemFromCart(String sessionId, String productId, Integer units) throws CartInteractionFailedException {
 		String ressourceUrl = cartUrl + sessionId;
 		LOG.debug("put to " + ressourceUrl);
 
 		Optional<CartContent> optCartContent = getCartContent(sessionId);
 
 		if (optCartContent.isPresent()) {
-			CartContent cartContent = optCartContent.get();
-			Integer remainingUnitsInCart = cartContent.getUnits(productId) - units;
-			if (remainingUnitsInCart > 0) {
-				cartContent.getContent().put(productId, remainingUnitsInCart);
-			} else {
-				cartContent.getContent().remove(productId);
+			try {
+				CartContent cartContent = optCartContent.get();
+				Integer remainingUnitsInCart = cartContent.getUnits(productId) - units;
+				if (remainingUnitsInCart > 0) {
+					cartContent.getContent().put(productId, remainingUnitsInCart);
+				} else {
+					cartContent.getContent().remove(productId);
+				}
+				Retry.decorateRunnable(retry, () -> template.put(ressourceUrl, cartContent)).run();
+			} catch (RestClientException e) {
+				LOG.info(e.getMessage());
+				throw new CartInteractionFailedException(
+						String.format("Deletion for session %s failed : %s, %d", sessionId, productId, units));
 			}
-			template.put(ressourceUrl, cartContent);
 		}
 	}
 
@@ -211,7 +228,7 @@ public class UIBackendService {
 	 */
 	public void confirmOrder(String sessionId, String cardNumber, String cardOwner, String checksum) throws OrderNotPlacedException {
 		// is it more reasonable to get total from cart service, or is it more
-		// reasonable to pass the total from the frontend (where it was displyed and
+		// reasonable to pass the total from the frontend (where it was displayed and
 		// therefore is known) ??
 
 		int total = getTotal(sessionId);
@@ -225,13 +242,19 @@ public class UIBackendService {
 
 		SagaRequest request = new SagaRequest(sessionId, cardNumber, cardOwner, checksum, total);
 
-		ResponseEntity<Void> response = template.postForEntity(ressourceUrl, request, Void.class);
-
-		if (response.getStatusCode() == HttpStatus.ACCEPTED) {
-			LOG.info(response.getStatusCode().toString() + " - orchestrator accepted request :)");
-		} else {
-			LOG.info(response.getStatusCode().toString() + " - orchestrator did not accept request :(");
+		try {
+			ResponseEntity<Void> response = Retry.decorateSupplier(retry, () -> template.postForEntity(ressourceUrl, request, Void.class)).get();
+			
+			if (response.getStatusCode() == HttpStatus.ACCEPTED) {
+				LOG.info(response.getStatusCode().toString() + " - orchestrator accepted request :)");
+			} else {
+				LOG.info(response.getStatusCode().toString() + " - orchestrator did not accept request :(");
+			}
+		} catch (RestClientException e) {
+			LOG.info(e.getMessage());
+			throw new OrderNotPlacedException(String.format("No Order placed for session %s. orchestrator not available. ", sessionId));
 		}
+
 	}
 
 	/**
@@ -247,8 +270,8 @@ public class UIBackendService {
 		LOG.debug("get from " + ressourceUrl);
 
 		try {
-			ResponseEntity<String> response = template.getForEntity(ressourceUrl, String.class);
-
+			ResponseEntity<String> response = Retry.decorateFunction(retry, (String url) -> template.getForEntity(url, String.class)).apply(ressourceUrl);
+			
 			JsonNode root = mapper.readTree(response.getBody());
 			JsonNode name = root.path("content");
 			// TODO : do i need this acces to content??
@@ -263,6 +286,7 @@ public class UIBackendService {
 		}
 		return Optional.empty();
 	}
+	
 
 	/**
 	 * retrieve product from inventory. 
@@ -275,7 +299,7 @@ public class UIBackendService {
 		LOG.debug("get from " + ressourceUrl);
 
 		try {
-			ResponseEntity<String> response = template.getForEntity(ressourceUrl, String.class);
+			ResponseEntity<String> response = Retry.decorateFunction(retry, (String url) -> template.getForEntity(url, String.class)).apply(ressourceUrl);
 
 			// important, because inventory api returns more fields than we need.
 			mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
@@ -348,7 +372,10 @@ public class UIBackendService {
 
 		try {
 			ReservationRequest request = new ReservationRequest(productId, sessionId, units);
-			ResponseEntity<Product> inventoryResponse = template.postForEntity(ressourceUrl, request, Product.class);
+			
+			ResponseEntity<Product> inventoryResponse = Retry.decorateSupplier(retry, 
+					() -> template.postForEntity(ressourceUrl, request, Product.class)).get();
+			
 			return inventoryResponse.getBody();
 		} catch (RestClientException e) { // no reservation for what ever reason
 			LOG.info(e.getMessage());

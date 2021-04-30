@@ -1,6 +1,6 @@
 package de.unistuttgart.t2.uibackend;
 
-import static de.unistuttgart.t2.uibackend.JSONs.*;
+import static de.unistuttgart.t2.uibackend.supplicants.JSONs.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -22,6 +22,7 @@ import org.springframework.web.client.RestTemplate;
 
 import de.unistuttgart.t2.common.CartContent;
 import de.unistuttgart.t2.common.Product;
+import de.unistuttgart.t2.uibackend.supplicants.JSONs;
 
 @ExtendWith(SpringExtension.class)
 @ExtendWith(MockitoExtension.class)
