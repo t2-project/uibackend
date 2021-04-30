@@ -64,8 +64,7 @@ public class UIBackenResponseTest {
 	}
 
 	@Test
-	public void getCartTest() {
-
+	public void getProductsInCartTest() {
 		// setup cart responses
 		ResponseEntity<String> cartEntity = new ResponseEntity(JSONs.cartResponse, new HttpHeaders(), HttpStatus.OK);
 		Mockito.when((template.getForEntity(JSONs.cartUrl + JSONs.sessionId, String.class))).thenReturn(cartEntity);
@@ -80,8 +79,11 @@ public class UIBackenResponseTest {
 
 		// assert
 		assertNotNull(products);
-		assertFalse(products.isEmpty());
+		assertEquals(1, products.size());
 		// TODO assert content
+		// once again: had i only implemented this earlier :x
+		assertEquals(productId, products.get(0).getId());
+		assertEquals(units, products.get(0).getUnits());
 	}
 
 	@Test
@@ -120,8 +122,5 @@ public class UIBackenResponseTest {
 		// AND I WOULD HAVE SAVED A LOT OF TIME :x (had i only implemented it earlier)
 		assertEquals(productId, products.get(0).getId());
 		assertEquals(anotherproductId, products.get(1).getId());
-		// 
-
 	}
-
 }

@@ -64,7 +64,7 @@ public class UIBackendService {
 	// retry stuff
 	RetryConfig config = RetryConfig.custom().maxAttempts(2).build();
 	RetryRegistry registry = RetryRegistry.of(config);
-	Retry retry = registry.retry("why_doe_a_retry_need_a_name?");
+	Retry retry = registry.retry("why_does_a_retry_need_a_name?");
 
 	// because i moved the @value stuff to the configuration thing-y
 	public UIBackendService(String cartUrl, String inventoryUrl, String orchestratorUrl, String reservationEndpoint) {
@@ -209,7 +209,7 @@ public class UIBackendService {
 
 			for (String productId : cartContent.getProductIds()) {
 				getSingleProduct(productId).ifPresent((p) -> {
-					p.setId(productId);
+					p.setUnits(cartContent.getUnits(productId));
 					rval.add(p);
 				});
 			}

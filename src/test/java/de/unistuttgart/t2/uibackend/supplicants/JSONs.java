@@ -13,13 +13,17 @@ package de.unistuttgart.t2.uibackend.supplicants;
  * not use default serialization, cause i gotta fake the acutal inventory
  * response, which is more, than just a serialized product.
  * 
+ * TODO objects x json mapper !?!?!? Am i dump???
+ * 
  * @author maumau
  *
  */
 public class JSONs {
 	
 	public static String productId = "foo";
+	public static int units = 42;
 	public static String anotherproductId = "foo2";
+	public static int anotherunits = 42;
 	public static String sessionId = "bar";
 	public static String orchestratorUrl = "http://localhost:8083/order/";
 	public static String cartUrl = "http://localhost:8080/cart/";
@@ -35,7 +39,7 @@ public class JSONs {
 	
     public static String cartResponse =  "{\n"
     	    	+ "  \"content\" : {\n"
-    	    	+ "    \"" + productId + "\" : 42\n"
+    	    	+ "    \"" + productId + "\" : " + units +"\n"
     	    	+ "  },\n"
     	    	+ "  \"_links\" : {\n"
     	    	+ "    \"self\" : {\n"
@@ -49,8 +53,8 @@ public class JSONs {
     
     public static String cartResponseMulti =  "{\n"
 	    	+ "  \"content\" : {\n"
-	    	+ "    \"" + productId + "\" : 42,\n"
-	    	+ "    \"" + anotherproductId + "\" : 3\n"
+	    	+ "    \"" + productId + "\" : " + units +",\n"
+	    	+ "    \"" + anotherproductId + "\" : " + anotherunits +"\n"
 	    	+ "  },\n"
 	    	+ "  \"_links\" : {\n"
 	    	+ "    \"self\" : {\n"
