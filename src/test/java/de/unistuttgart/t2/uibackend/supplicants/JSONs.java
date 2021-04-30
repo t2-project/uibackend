@@ -1,4 +1,4 @@
-package de.unistuttgart.t2.uibackend;
+package de.unistuttgart.t2.uibackend.supplicants;
 
 /**
  * Here i store sting representations of what ever jsons i need for my test
