@@ -10,6 +10,9 @@ jobs:
     name: Push Docker image to Docker Hub
     runs-on: ubuntu-latest
     steps:
+    - name: set env
+      run: |
+         echo "TRAM_VERSION=fooo" >> $GITHUB_ENV
     - name: Login to DockerHub
       uses: docker/login-action@v1 
       with:
@@ -30,11 +33,11 @@ jobs:
         distribution: 'adopt'
         java-version: '11'
     - name: build common
-      run: cd common && mvn clean install
+      run: cd common && echo $TRAM_VERSION && mvn clean install
     - name: install common
-      run: cd common && mvn install:install-file -Dfile=./target/common-1.0-SNAPSHOT.jar  -DpomFile=./pom.xml
+      run: cd common && mvn install:install-file -Dfile=./target/common-1.0-SNAPSHOT.jar -DpomFile=./pom.xml
     - name: verify uibackend
-      run: cd uibackend &&. ./setenv.sh && echo $TRAM_VERSION && mvn clean install
+      run: cd uibackend && mvn clean install
 #
 # that's how cool kids would do their tags:       
 #        docker build -t stiesssh/uibackend:${{ env.RELEASE_VERSION }} .
