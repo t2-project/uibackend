@@ -34,7 +34,7 @@ jobs:
     - name: install common
       run: cd common && mvn install:install-file -Dfile=./target/common-1.0-SNAPSHOT.jar  -DpomFile=./pom.xml
     - name: verify uibackend
-      run: cd uibackend && mvn clean install
+      run: cd uibackend &&. ./setenv.sh && echo $TRAM_VERSION && mvn clean install
 #
 # that's how cool kids would do their tags:       
 #        docker build -t stiesssh/uibackend:${{ env.RELEASE_VERSION }} .
