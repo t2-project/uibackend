@@ -67,7 +67,12 @@ public class UIBackendService {
 	Retry retry = registry.retry("why_does_a_retry_need_a_name?");
 
 	// because i moved the @value stuff to the configuration thing-y
-	public UIBackendService(String cartUrl, String inventoryUrl, String orchestratorUrl, String reservationEndpoint) {
+    public UIBackendService(String cartUrl, String inventoryUrl, String orchestratorUrl, String reservationEndpoint) {
+        if (cartUrl == null || inventoryUrl == null || orchestratorUrl == null || reservationEndpoint == null) {
+            throw new IllegalArgumentException(
+                    String.format("urls must not be null but one of these is: %s, %s, %s, %s ", cartUrl, inventoryUrl,
+                            orchestratorUrl, reservationEndpoint));
+	    }
 		this.cartUrl = cartUrl;
 		this.inventoryUrl = inventoryUrl;
 		this.orchestratorUrl = orchestratorUrl;
@@ -278,7 +283,7 @@ public class UIBackendService {
 
 			return Optional.of(mapper.treeToValue(name, CartContent.class));
 		} catch (RestClientException e) { // 404 or something like that.
-			LOG.info(e.getMessage());
+			LOG.info(String.format("not yet any cart content for %s : %s  ", sessionId, e.getMessage()));
 			// e.printStackTrace();
 		} catch (JsonProcessingException e) { // whatever we received, it was no cart content.
 			LOG.info(e.getMessage());
