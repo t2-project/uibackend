@@ -4,20 +4,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
-import javax.annotation.PostConstruct;
-
-import org.apache.logging.log4j.util.StringBuilderFormattable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
@@ -39,353 +29,374 @@ import io.github.resilience4j.retry.RetryConfig;
 import io.github.resilience4j.retry.RetryRegistry;
 
 /**
- * collects data from other services.
+ * Manages interaction with other services.
  * 
  * @author maumau
  *
  */
 public class UIBackendService {
-	
-	@Autowired
-	RestTemplate template;
 
-	private final Logger LOG = LoggerFactory.getLogger(getClass());
+    @Autowired
+    RestTemplate template;
 
-	private final ObjectMapper mapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES,
-			false);
+    private final Logger LOG = LoggerFactory.getLogger(getClass());
 
-	// they have all the trailing '/' and stuff.
-	private String orchestratorUrl;
-	private String cartUrl;
-	private String inventoryUrl;
+    private final ObjectMapper mapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES,
+            false);
 
-	private String reservationEndpoint;
-	
-	// retry stuff
-	RetryConfig config = RetryConfig.custom().maxAttempts(2).build();
-	RetryRegistry registry = RetryRegistry.of(config);
-	Retry retry = registry.retry("why_does_a_retry_need_a_name?");
+    // they have all the trailing '/' and stuff.
+    private String orchestratorUrl;
+    private String cartUrl;
+    private String inventoryUrl;
 
-	// because i moved the @value stuff to the configuration thing-y
+    private String reservationEndpoint;
+
+    // retry stuff
+    RetryConfig config = RetryConfig.custom().maxAttempts(2).build();
+    RetryRegistry registry = RetryRegistry.of(config);
+    Retry retry = registry.retry("uibackendRetry");
+
+    // because i moved the @value stuff to the configuration thing-y
     public UIBackendService(String cartUrl, String inventoryUrl, String orchestratorUrl, String reservationEndpoint) {
         if (cartUrl == null || inventoryUrl == null || orchestratorUrl == null || reservationEndpoint == null) {
             throw new IllegalArgumentException(
-                    String.format("urls must not be null but one of these is: %s, %s, %s, %s ", cartUrl, inventoryUrl,
+                    String.format("urls must not be 'null' but one of these is: %s, %s, %s, %s ", cartUrl, inventoryUrl,
                             orchestratorUrl, reservationEndpoint));
-	    }
-		this.cartUrl = cartUrl;
-		this.inventoryUrl = inventoryUrl;
-		this.orchestratorUrl = orchestratorUrl;
-		this.reservationEndpoint = reservationEndpoint;
+        }
+        this.cartUrl = cartUrl;
+        this.inventoryUrl = inventoryUrl;
+        this.orchestratorUrl = orchestratorUrl;
+        this.reservationEndpoint = reservationEndpoint;
+    }
 
-		// TODO some validation? like, make sure all the urls are valid and stuff like
-		// that
-	}
+    /**
+     * 
+     * Get a list of all products from the inventory.
+     * 
+     * <p>
+     * TODO : the generated endpoints do things with pages. this gets the first
+     * twenty items only.
+     * 
+     * @return a list of all products in the inventory. (might be incomplete)
+     */
+    public List<Product> getAllProducts() {
+        LOG.debug("get from " + inventoryUrl);
 
-	/**
-	 * Get all products available at the store.
-	 * 
-	 * TODO : the generated endpoint does things with pages. currectly get the first
-	 * twenty items only.
-	 * 
-	 * @return a list of all products available
-	 */
-	public List<Product> getAllProducts() {
-		LOG.debug("get from " + inventoryUrl);
+        List<Product> rval = new ArrayList<>();
 
-		List<Product> rval = new ArrayList<>();
+        try {
+            ResponseEntity<String> response = Retry
+                    .decorateSupplier(retry, () -> template.getForEntity(inventoryUrl, String.class)).get();
 
-		try {
-			ResponseEntity<String> response = Retry.decorateSupplier(retry, () -> template.getForEntity(inventoryUrl, String.class)).get(); 
+            JsonNode root = mapper.readTree(response.getBody());
+            JsonNode inventory = root.findPath("inventory");
 
-			JsonNode root = mapper.readTree(response.getBody());
-			JsonNode inventory = root.findPath("inventory");
+            for (JsonNode node : inventory) {
+                try {
+                    Product p = mapper.treeToValue(node, Product.class);
+                    p.setId(getIdfromJson(node));
+                    rval.add(p);
+                } catch (JsonProcessingException e) {
+                    e.printStackTrace(); // single malformed product, continue with next one
+                }
+            }
+        } catch (RestClientException e) { // 404 or something like that.
+            e.printStackTrace();
+        } catch (JsonProcessingException e) { // malformed JSON, or whatever :x
+            e.printStackTrace();
+        }
+        return rval;
+    }
 
-			for (JsonNode node : inventory) {
-				try {
-					Product p = mapper.treeToValue(node, Product.class);
-					p.setId(getIdfromJson(node));
-					rval.add(p);
-				} catch (JsonProcessingException e) {
-					e.printStackTrace(); // single malformed product, continue with next one
-				}
-			}
-		} catch (RestClientException e) { // 404 or something like that.
-			e.printStackTrace();
-		} catch (JsonProcessingException e) { // malformed JSON, or whatever :x
-			e.printStackTrace();
-		}
-		return rval;
-	}
+    /**
+     * 
+     * Add the given number units of product to a users cart.
+     * 
+     * <p>
+     * If the product is already in the cart, the units of that product will be
+     * updated.
+     * 
+     * @param sessionId identifies the cart to add to
+     * @param productId id of product to be added
+     * @param units     number of units to be added
+     * @throws CartInteractionFailedException if the request number of unit could
+     *                                        not be placed in the cart.
+     */
+    public void addItemToCart(String sessionId, String productId, Integer units) throws CartInteractionFailedException {
+        String ressourceUrl = cartUrl + sessionId;
+        LOG.debug("put to " + ressourceUrl);
 
-	/**
-	 * Add units of product to a users shopping cart.
-	 * 
-	 * If product is already present in the cart, the units of that product will be
-	 * updated.
-	 * 
-	 * @param sessionId for identification
-	 * @param productId id of product to be added
-	 * @param units     number of units to be added
-	 */
-	public void addItemToCart(String sessionId, String productId, Integer units) throws ReservationFailedException {
-		String ressourceUrl = cartUrl + sessionId;
-		LOG.debug("put to " + ressourceUrl);
+        Optional<CartContent> optCartContent = getCartContent(sessionId);
 
-		Optional<CartContent> optCartContent = getCartContent(sessionId);
+        try {
+            if (optCartContent.isPresent()) {
+                CartContent cartContent = optCartContent.get();
+                cartContent.getContent().put(productId, units + cartContent.getUnits(productId));
+                template.put(ressourceUrl, cartContent);
 
-		try {
-			if (optCartContent.isPresent()) {
-				CartContent cartContent = optCartContent.get();
-				cartContent.getContent().put(productId, units + cartContent.getUnits(productId));
-				template.put(ressourceUrl, cartContent);
+            } else {
+                template.put(ressourceUrl, new CartContent(Map.of(productId, units)));
+            }
+        } catch (RestClientException e) {
+            throw new CartInteractionFailedException(
+                    String.format("Could not add %d units of product %s to cart.", units, productId));
+        }
+    }
 
-			} else {
-				template.put(ressourceUrl, new CartContent(Map.of(productId, units)));
-			}
-		} catch (RestClientException e) {
-			throw new ReservationFailedException(String.format("Could not add %d units of product %s to cart.", units, productId));
-		}
-	}
+    /**
+     * Delete the given number units of product from a users cart.
+     * 
+     * <p>
+     * If the number of units in the cart decrease to zero or less, the product is
+     * remove from the cart. If the no such product is in cart, do nothing.
+     * 
+     * @param sessionId identifies the cart to delete from
+     * @param productId id of the product to be deleted
+     * @param units     number of units to be deleted
+     * @throws CartInteractionFailedException if anything went wrong while talking
+     *                                        to the cart
+     */
+    public void deleteItemFromCart(String sessionId, String productId, Integer units)
+            throws CartInteractionFailedException {
+        String ressourceUrl = cartUrl + sessionId;
+        LOG.debug("put to " + ressourceUrl);
 
-	/**
-	 * Delete units of product from a users shopping cart.
-	 * 
-	 * If units of product decrease to zero or less, remove product from cart.
-	 * If the no such product is in cart, do nothing
-	 * 
-	 * @param sessionId for identification
-	 * @param productId id of product to be deleted
-	 * @param units     number of units to be deleted
-	 */
-	public void deleteItemFromCart(String sessionId, String productId, Integer units) throws CartInteractionFailedException {
-		String ressourceUrl = cartUrl + sessionId;
-		LOG.debug("put to " + ressourceUrl);
+        Optional<CartContent> optCartContent = getCartContent(sessionId);
 
-		Optional<CartContent> optCartContent = getCartContent(sessionId);
+        if (optCartContent.isPresent()) {
+            try {
+                CartContent cartContent = optCartContent.get();
+                Integer remainingUnitsInCart = cartContent.getUnits(productId) - units;
+                if (remainingUnitsInCart > 0) {
+                    cartContent.getContent().put(productId, remainingUnitsInCart);
+                } else {
+                    cartContent.getContent().remove(productId);
+                }
+                Retry.decorateRunnable(retry, () -> template.put(ressourceUrl, cartContent)).run();
+            } catch (RestClientException e) {
+                LOG.info(e.getMessage());
+                throw new CartInteractionFailedException(
+                        String.format("Deletion for session %s failed : %s, %d", sessionId, productId, units));
+            }
+        }
+    }
 
-		if (optCartContent.isPresent()) {
-			try {
-				CartContent cartContent = optCartContent.get();
-				Integer remainingUnitsInCart = cartContent.getUnits(productId) - units;
-				if (remainingUnitsInCart > 0) {
-					cartContent.getContent().put(productId, remainingUnitsInCart);
-				} else {
-					cartContent.getContent().remove(productId);
-				}
-				Retry.decorateRunnable(retry, () -> template.put(ressourceUrl, cartContent)).run();
-			} catch (RestClientException e) {
-				LOG.info(e.getMessage());
-				throw new CartInteractionFailedException(
-						String.format("Deletion for session %s failed : %s, %d", sessionId, productId, units));
-			}
-		}
-	}
+    /**
+     * Delete the entire cart for the given sessionId.
+     * 
+     * @param sessionId identifies the cart content to delete
+     * @throws CartInteractionFailedException if anything went wrong while talking
+     *                                        to the cart
+     */
+    public void deleteCart(String sessionId) throws CartInteractionFailedException {
+        String ressourceUrl = cartUrl + sessionId;
+        LOG.debug("delete to " + ressourceUrl);
 
-	/**
-	 * Delete entire cart for a session.
-	 * 
-	 * @param sessionId for identification
-	 */
-	public void deleteCart(String sessionId) {
-		String ressourceUrl = cartUrl + sessionId;
-		LOG.debug("delete to " + ressourceUrl);
+        try {
+            template.delete(ressourceUrl);
+        } catch (RestClientException e) { // 404 or something like that.
+            LOG.info(e.getMessage());
+        }
+    }
 
-		try {
-			template.delete(ressourceUrl);
-		} catch (RestClientException e) { // 404 or something like that.
-			LOG.info(e.getMessage());
-		}
-	}
+    /**
+     * Get a list of all products in a users cart.
+     * 
+     * @param sessionId identfies the cart content to get
+     * @return a list of the product in the cart
+     */
+    public List<Product> getProductsInCart(String sessionId) {
+        List<Product> rval = new ArrayList<Product>();
 
-	/**
-	 * Get all products in a users cart.
-	 * 
-	 * @param sessionId for identification
-	 * @return list of all product in the cart
-	 */
-	public List<Product> getProductsInCart(String sessionId) {
-		List<Product> rval = new ArrayList<Product>();
+        Optional<CartContent> optCartContent = getCartContent(sessionId);
 
-		Optional<CartContent> optCartContent = getCartContent(sessionId);
+        if (optCartContent.isPresent()) {
+            CartContent cartContent = optCartContent.get();
 
-		if (optCartContent.isPresent()) {
-			CartContent cartContent = optCartContent.get();
+            for (String productId : cartContent.getProductIds()) {
+                getSingleProduct(productId).ifPresent((p) -> {
+                    p.setUnits(cartContent.getUnits(productId));
+                    rval.add(p);
+                });
+            }
+        }
 
-			for (String productId : cartContent.getProductIds()) {
-				getSingleProduct(productId).ifPresent((p) -> {
-					p.setUnits(cartContent.getUnits(productId));
-					rval.add(p);
-				});
-			}
-		}
+        return rval;
+    }
 
-		return rval;
-	}
+    /**
+     * Reserve a the given number of units of the given product.
+     * 
+     * @param sessionId identifies the session to reserve for
+     * @param productId identifies the product to reserve of
+     * @param units     number of units to reserve
+     * @return the product the reservation was made for
+     * @throws ReservationFailedException if the reservation could not be placed
+     */
+    public Product makeReservations(String sessionId, String productId, Integer units)
+            throws ReservationFailedException {
 
-	/**
-	 * telll orchestrator to start the saga for this session.
-	 * 
-	 * @param sessionId
-	 * @param cardNumber
-	 * @param cardOwner
-	 * @param checksum
-	 */
-	public void confirmOrder(String sessionId, String cardNumber, String cardOwner, String checksum) throws OrderNotPlacedException {
-		// is it more reasonable to get total from cart service, or is it more
-		// reasonable to pass the total from the frontend (where it was displayed and
-		// therefore is known) ??
+        String ressourceUrl = inventoryUrl + reservationEndpoint;
+        LOG.debug("post to " + ressourceUrl);
 
-		int total = getTotal(sessionId);
-		
-		if (total <= 0) {
-			throw new OrderNotPlacedException(String.format("No Order placed for session %s. cart is either empty or not available. ", sessionId));
-		}
+        try {
+            ReservationRequest request = new ReservationRequest(productId, sessionId, units);
 
-		String ressourceUrl = orchestratorUrl;
-		LOG.debug("post to " + ressourceUrl);
+            ResponseEntity<Product> inventoryResponse = Retry
+                    .decorateSupplier(retry, () -> template.postForEntity(ressourceUrl, request, Product.class)).get();
 
-		SagaRequest request = new SagaRequest(sessionId, cardNumber, cardOwner, checksum, total);
+            return inventoryResponse.getBody();
+        } catch (RestClientException e) { // no reservation for what ever reason
+            LOG.info(e.getMessage());
+            throw new ReservationFailedException(
+                    String.format("Reservation for session %s failed : %s, %d", sessionId, productId, units));
+        }
+    }
 
-		try {
-			ResponseEntity<Void> response = Retry.decorateSupplier(retry, () -> template.postForEntity(ressourceUrl, request, Void.class)).get();
-			
-			if (response.getStatusCode() == HttpStatus.ACCEPTED) {
-				LOG.info(response.getStatusCode().toString() + " - orchestrator accepted request :)");
-			} else {
-				LOG.info(response.getStatusCode().toString() + " - orchestrator did not accept request :(");
-			}
-		} catch (RestClientException e) {
-			LOG.info(e.getMessage());
-			throw new OrderNotPlacedException(String.format("No Order placed for session %s. orchestrator not available. ", sessionId));
-		}
+    /**
+     * Posts a request to start a transaction to the orchestrator.
+     * 
+     * @param sessionId  identifies the session
+     * @param cardNumber part of payment details
+     * @param cardOwner  part of payment details
+     * @param checksum   part of payment details
+     */
+    public void confirmOrder(String sessionId, String cardNumber, String cardOwner, String checksum)
+            throws OrderNotPlacedException {
+        // is it more reasonable to get total from cart service, or is it more
+        // reasonable to pass the total from the front end (where it was displayed and
+        // therefore is known) ??
 
-	}
+        int total = getTotal(sessionId);
 
-	/**
-	 * query cart service for content of a sessions cart.
-	 * 
-	 * if request returns 404 or deserialization failed, there is no cart content.
-	 * 
-	 * @param sessionId
-	 * @return content of cart iff it exists, empty optional otherwise
-	 */
-	protected Optional<CartContent> getCartContent(String sessionId) {
-		String ressourceUrl = cartUrl + sessionId;
-		LOG.debug("get from " + ressourceUrl);
+        if (total <= 0) {
+            throw new OrderNotPlacedException(String
+                    .format("No Order placed for session %s. cart is either empty or not available. ", sessionId));
+        }
 
-		try {
-			ResponseEntity<String> response = Retry.decorateFunction(retry, (String url) -> template.getForEntity(url, String.class)).apply(ressourceUrl);
-			
-			JsonNode root = mapper.readTree(response.getBody());
-			JsonNode name = root.path("content");
-			// TODO : do i need this acces to content??
+        String ressourceUrl = orchestratorUrl;
+        LOG.debug("post to " + ressourceUrl);
 
-			return Optional.of(mapper.treeToValue(name, CartContent.class));
-		} catch (RestClientException e) { // 404 or something like that.
-			LOG.info(String.format("not yet any cart content for %s : %s  ", sessionId, e.getMessage()));
-			// e.printStackTrace();
-		} catch (JsonProcessingException e) { // whatever we received, it was no cart content.
-			LOG.info(e.getMessage());
-			// e.printStackTrace();
-		}
-		return Optional.empty();
-	}
-	
+        SagaRequest request = new SagaRequest(sessionId, cardNumber, cardOwner, checksum, total);
 
-	/**
-	 * retrieve product from inventory. 
-	 * 
-	 * @param productId id of retrieved product
-	 * @return product with given id iff it exists in inventory
-	 */
-	protected Optional<Product> getSingleProduct(String productId) {
-		String ressourceUrl = inventoryUrl + productId;
-		LOG.debug("get from " + ressourceUrl);
+        try {
+            ResponseEntity<Void> response = Retry
+                    .decorateSupplier(retry, () -> template.postForEntity(ressourceUrl, request, Void.class)).get();
 
-		try {
-			ResponseEntity<String> response = Retry.decorateFunction(retry, (String url) -> template.getForEntity(url, String.class)).apply(ressourceUrl);
+            LOG.info("orchestrator accepted request with status code : " + response.getStatusCode().toString());
 
-			// important, because inventory api returns more fields than we need.
-			mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        } catch (RestClientException e) {
+            LOG.info(e.getMessage());
+            throw new OrderNotPlacedException(
+                    String.format("no Order placed for session %s. orchestrator not available. ", sessionId));
+        }
+    }
 
-			Product product = mapper.readValue(response.getBody(), Product.class);
-			product.setId(productId);
+    /**
+     * Get the content of the cart belonging to the given sessionId.
+     * 
+     * <p>
+     * If there is either no cart content for the given sessionId, or the retrieval
+     * of the content failed, an empty optional is returned.
+     * 
+     * @param sessionId
+     * @return content of cart iff it exists
+     */
+    protected Optional<CartContent> getCartContent(String sessionId) {
+        String ressourceUrl = cartUrl + sessionId;
+        LOG.debug("get from " + ressourceUrl);
 
-			return Optional.of(product);
-		} catch (RestClientException e) { // 404 or something like that.
-			e.printStackTrace();
-		} catch (JsonProcessingException e) { // whatever we received, it was no cart content.
-			e.printStackTrace();
-		}
-		return Optional.empty();
-	}
+        try {
+            ResponseEntity<String> response = Retry
+                    .decorateFunction(retry, (String url) -> template.getForEntity(url, String.class))
+                    .apply(ressourceUrl);
 
-	/**
-	 * extract the id under which a resource can be found.
-	 * 
-	 * TODO find a better was to do this. there must be one.
-	 * 
-	 * @param node some parent node
-	 * @return the id
-	 */
-	private String getIdfromJson(JsonNode node) {
-		JsonNode link = node.findPath("href");
-		String s = link.asText();
-		String id = s.split("/")[s.split("/").length - 1];
-		return id;
-	}
+            JsonNode root = mapper.readTree(response.getBody());
+            JsonNode name = root.path("content");
 
-	/**
-	 * calculate total for a a session's cart
-	 * 
-	 * depends on cart service to get the cart content and depends on inventory to get the price per unit.
-	 * if connecting to either fails,  returns 0. 
-	 * 
-	 * @param sessionId identifies session to get total for
-	 * @return the total
-	 */
-	private int getTotal(String sessionId) {
-		CartContent cart = getCartContent(sessionId).orElse(new CartContent());
+            return Optional.of(mapper.treeToValue(name, CartContent.class));
+        } catch (RestClientException e) { // 404 or something like that.
+            LOG.info(String.format("not yet any cart content for %s : %s  ", sessionId, e.getMessage()));
+        } catch (JsonProcessingException e) { // whatever we received, it was no cart content.
+            LOG.info(e.getMessage());
+        }
+        return Optional.empty();
+    }
 
-		int total = 0;
+    /**
+     * Get the product with the given productId from the inventory.
+     * 
+     * <p>
+     * If there is either no product with the given sessionId, or the retrieval of
+     * the product failed, an empty optional is returned.
+     * 
+     * @param productId id of the product to be retrieved
+     * @return product with given id iff it exists
+     */
+    protected Optional<Product> getSingleProduct(String productId) {
+        String ressourceUrl = inventoryUrl + productId;
+        LOG.debug("get from " + ressourceUrl);
 
-		for (String productId : cart.getProductIds()) {
-			Optional<Product> product = getSingleProduct(productId);
-			if (product.isEmpty()) {
-				return 0;
-			}
-			total += product.get().getPrice() * cart.getUnits(productId);
-		}
-		return total;
-	}
+        try {
+            ResponseEntity<String> response = Retry
+                    .decorateFunction(retry, (String url) -> template.getForEntity(url, String.class))
+                    .apply(ressourceUrl);
 
-	/**
-	 * reserve units of product to be put into cart.
-	 * 
-	 * @param sessionId
-	 * @param productId
-	 * @param units
-	 * @return the product the reservation was made for
-	 * @throws TODO iff reservation failed
-	 */
-	public Product makeReservations(String sessionId, String productId, Integer units)
-			throws ReservationFailedException {
+            // important, because inventory api may (did) return more fields than we need.
+            mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
-		String ressourceUrl = inventoryUrl + reservationEndpoint;
-		LOG.debug("post to " + ressourceUrl);
+            Product product = mapper.readValue(response.getBody(), Product.class);
+            product.setId(productId);
 
-		try {
-			ReservationRequest request = new ReservationRequest(productId, sessionId, units);
-			
-			ResponseEntity<Product> inventoryResponse = Retry.decorateSupplier(retry, 
-					() -> template.postForEntity(ressourceUrl, request, Product.class)).get();
-			
-			return inventoryResponse.getBody();
-		} catch (RestClientException e) { // no reservation for what ever reason
-			LOG.info(e.getMessage());
-			throw new ReservationFailedException(
-					String.format("Reservation for session %s failed : %s, %d", sessionId, productId, units));
-		}
-	}
+            return Optional.of(product);
+        } catch (RestClientException e) { // 404 or something like that.
+            e.printStackTrace();
+        } catch (JsonProcessingException e) { // whatever we received, it was no product.
+            e.printStackTrace();
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * Extracts the id under which a resource can be found from JSON.
+     * 
+     * <p>
+     * TODO i'm pretty sure there are better ways to do this, but i didn't find
+     * them.
+     * 
+     * @param node a json node that contains a link to a resource
+     * @return the resources id
+     */
+    private String getIdfromJson(JsonNode node) {
+        JsonNode link = node.findPath("href");
+        String s = link.asText();
+        String id = s.split("/")[s.split("/").length - 1];
+        return id;
+    }
+
+    /**
+     * Calculates the total of a users cart.
+     * 
+     * <p>
+     * Depends on the cart service to get the cart content and depends on the
+     * inventory service to get the price per unit. If either of them fails, the the
+     * returned total is 0.
+     * 
+     * @param sessionId identifies the session to get total for
+     * @return the total money to pay for products in the cart
+     */
+    private int getTotal(String sessionId) {
+        CartContent cart = getCartContent(sessionId).orElse(new CartContent());
+
+        int total = 0;
+
+        for (String productId : cart.getProductIds()) {
+            Optional<Product> product = getSingleProduct(productId);
+            if (product.isEmpty()) {
+                return 0;
+            }
+            total += product.get().getPrice() * cart.getUnits(productId);
+        }
+        return total;
+    }
 }

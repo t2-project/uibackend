@@ -1,19 +1,10 @@
 package de.unistuttgart.t2.uibackend.supplicants;
 
 /**
- * Here i store sting representations of what ever jsons i need for my test
- * cases.
- * 
- * I'm pretty sure there is a better was to do this, that i do not yet know of.
- * 
- * maybe move this to common. maybe i want to use this to test other services as
- * well.
- * 
- * i would be cool if i had something like... build json from object. but can
- * not use default serialization, cause i gotta fake the acutal inventory
- * response, which is more, than just a serialized product.
- * 
- * TODO objects x json mapper !?!?!? Am i dump???
+ * String representations of the JSONs used for the Tests. 
+ *  
+ * <p> 
+ * TODO : this is a hell hole. do something like... create object and use json mapper??
  * 
  * @author maumau
  *

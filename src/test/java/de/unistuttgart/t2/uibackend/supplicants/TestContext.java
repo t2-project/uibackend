@@ -11,15 +11,15 @@ import de.unistuttgart.t2.uibackend.UIBackendService;
 @Profile("test")
 public class TestContext {
 
-	@Bean
-	public RestTemplate template() {
-		return new RestTemplate ();
-	}
-	
-	@Bean
-	public UIBackendService service() {
-		return new UIBackendService(JSONs.cartUrl,JSONs.inventoryUrl, JSONs.orchestratorUrl, JSONs.reservationEndpoint);
-	}
+    @Bean
+    public RestTemplate template() {
+        return new RestTemplate();
+    }
 
-	
+    @Bean
+    public UIBackendService service() {
+        return new UIBackendService(JSONs.cartUrl, JSONs.inventoryUrl, JSONs.orchestratorUrl,
+                JSONs.reservationEndpoint);
+    }
+
 }
