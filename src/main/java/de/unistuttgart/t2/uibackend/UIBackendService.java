@@ -271,7 +271,7 @@ public class UIBackendService {
 
         if (total <= 0) {
             throw new OrderNotPlacedException(String
-                    .format("No Order placed for session %s. cart is either empty or not available. ", sessionId));
+                    .format("No Order placed for session %s. Cart is either empty or not available. ", sessionId));
         }
 
         String ressourceUrl = orchestratorUrl;
@@ -288,7 +288,7 @@ public class UIBackendService {
         } catch (RestClientException e) {
             LOG.info(e.getMessage());
             throw new OrderNotPlacedException(
-                    String.format("no Order placed for session %s. orchestrator not available. ", sessionId));
+                    String.format("No Order placed for session %s. Orchestrator not available. ", sessionId));
         }
     }
 
