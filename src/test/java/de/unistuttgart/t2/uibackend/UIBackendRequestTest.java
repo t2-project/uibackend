@@ -17,7 +17,7 @@ import org.springframework.web.client.RestTemplate;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import de.unistuttgart.t2.common.ReservationRequest;
-import de.unistuttgart.t2.common.saga.SagaRequest;
+import de.unistuttgart.t2.common.SagaRequest;
 import de.unistuttgart.t2.uibackend.supplicants.JSONs;
 import de.unistuttgart.t2.uibackend.supplicants.TestContext;
 
