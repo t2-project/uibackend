@@ -3,9 +3,9 @@
 This Service is the UI Backend. 
 It wants to be an API Gateway and talks to a the Cart, Inventory and Orchestrator service.
 
-## Build and Run Manually
+## Build and Run
 
-_**TODO: copy from Order was mangus checked it.**_
+Confer the [Documentation](https://t2-documentation.readthedocs.io/en/latest/guides/kube.html) on how to build, run or deploy the T2 Store services.
 
 ## HTTP Endpoints
 
