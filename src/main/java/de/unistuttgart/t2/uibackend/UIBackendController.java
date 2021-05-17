@@ -7,12 +7,14 @@ import java.util.Map.Entry;
 import javax.servlet.http.HttpSession;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -64,7 +66,7 @@ public class UIBackendController {
      * @throws ReservationFailedException if all reservations failed.
      */
     @PostMapping("/products/add")
-    public List<Product> addItemsToCart(HttpSession session, @RequestBody CartContent products)
+    public List<Product> addItemsToCart(@RequestHeader(HttpHeaders.COOKIE) String sessionId, @RequestBody CartContent products)
             throws ReservationFailedException, CartInteractionFailedException {
         List<Product> successfullyAddedProducts = new ArrayList<>();
 
@@ -74,8 +76,8 @@ public class UIBackendController {
             try {
                 // contact inventory first, cause i'd rather have a dangling reservation than a
                 // products in the cart that are not backed with reservations.
-                Product addedProduct = service.makeReservations(session.getId(), product.getKey(), product.getValue());
-                service.addItemToCart(session.getId(), product.getKey(), product.getValue());
+                Product addedProduct = service.makeReservations(sessionId, product.getKey(), product.getValue());
+                service.addItemToCart(sessionId, product.getKey(), product.getValue());
                 successfullyAddedProducts.add(addedProduct);
 
             } catch (ReservationFailedException e) {
@@ -99,10 +101,10 @@ public class UIBackendController {
      *                 units
      */
     @PostMapping("/products/delete")
-    public void deleteItemsFromCart(HttpSession session, @RequestBody CartContent products) {
+    public void deleteItemsFromCart(@RequestHeader(HttpHeaders.COOKIE) String sessionId, @RequestBody CartContent products) {
         for (Entry<String, Integer> product : products.getContent().entrySet()) {
             try {
-                service.deleteItemFromCart(session.getId(), product.getKey(), product.getValue());
+                service.deleteItemFromCart(sessionId, product.getKey(), product.getValue());
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -116,8 +118,8 @@ public class UIBackendController {
      * @return a list of all products in the users cart.
      */
     @GetMapping("/cart")
-    public List<Product> getCart(HttpSession session) {
-        return service.getProductsInCart(session.getId());
+    public List<Product> getCart(@RequestHeader(HttpHeaders.COOKIE) String sessionId) {
+        return service.getProductsInCart(sessionId);
     }
 
     /**
@@ -132,11 +134,11 @@ public class UIBackendController {
      * @throws OrderNotPlacedException if the order could not be placed.
      */
     @PostMapping("/confirm")
-    public void confirmOrder(HttpSession session, @RequestBody OrderRequest request) throws OrderNotPlacedException, CartInteractionFailedException {
-        service.confirmOrder(session.getId(), request.getCardNumber(), request.getCardOwner(), request.getChecksum());
-        service.deleteCart(session.getId());
+    public void confirmOrder(@RequestHeader(HttpHeaders.COOKIE) String sessionId, @RequestBody OrderRequest request) throws OrderNotPlacedException, CartInteractionFailedException {
+        service.confirmOrder(sessionId, request.getCardNumber(), request.getCardOwner(), request.getChecksum());
+        service.deleteCart(sessionId);
         // session stops after order is placed.
-        session.invalidate();
+        // session.invalidate();
     }
 
     /**
@@ -145,8 +147,9 @@ public class UIBackendController {
      * @return a friendly greeting
      */
     @GetMapping("/")
-    public String greetings() {
-        return "Friendly reetings from UI Backend :)";
+    public String greetingsWithHeaders(@RequestHeader(HttpHeaders.COOKIE) String sessionId) {
+        //return "Friendly reetings from UI Backend to session " + headers.getFirst(HttpHeaders.COOKIE) + " [ " + headers.getFirst("sessionid") + " ]";
+        return "Friendly Greetings for " + sessionId;
     }
 
     /**
