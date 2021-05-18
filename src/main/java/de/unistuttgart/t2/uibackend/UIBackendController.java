@@ -40,10 +40,14 @@ public class UIBackendController {
     /**
      * Get a list of all products in the inventory.
      * 
+     * The session exists such that i can get a cookie even though i am not using
+     * the ui (frontend), e.g. as the load generator does.
+     * 
+     * @param session http session
      * @return a list of all product in the inventory.
      */
     @GetMapping("/products/all")
-    public List<Product> getAllProducts() {
+    public List<Product> getAllProducts(HttpSession session) {
         return service.getAllProducts();
     }
 
@@ -59,20 +63,21 @@ public class UIBackendController {
      * <p>
      * Replies as long as at least on product is added to the cart.
      * 
-     * @param session  http session of user
+     * @param sessionId sessionId of user
      * @param products products to be added, including the number of units thereof
      * @return a list of all products that were added with {@code units} being the
      *         number of unit that were added / reserved.
      * @throws ReservationFailedException if all reservations failed.
      */
     @PostMapping("/products/add")
-    public List<Product> addItemsToCart(@RequestHeader(HttpHeaders.COOKIE) String sessionId, @RequestBody CartContent products)
-            throws ReservationFailedException, CartInteractionFailedException {
+    public List<Product> addItemsToCart(@RequestHeader(HttpHeaders.COOKIE) String sessionId,
+            @RequestBody CartContent products) throws ReservationFailedException, CartInteractionFailedException {
         List<Product> successfullyAddedProducts = new ArrayList<>();
 
-        StringBuilder failures = new StringBuilder();
-
         for (Entry<String, Integer> product : products.getContent().entrySet()) {
+            if (product.getValue() == 0) {
+                continue;
+            }
             try {
                 // contact inventory first, cause i'd rather have a dangling reservation than a
                 // products in the cart that are not backed with reservations.
@@ -81,13 +86,8 @@ public class UIBackendController {
                 successfullyAddedProducts.add(addedProduct);
 
             } catch (ReservationFailedException e) {
-                failures.append(e.getMessage()).append("\n");
+                e.printStackTrace();
             }
-        }
-
-        // unless all reservations fail, we'll just ignore the failures :x
-        if (successfullyAddedProducts.isEmpty()) {
-            throw new ReservationFailedException(failures.toString());
         }
 
         return successfullyAddedProducts;
@@ -96,12 +96,14 @@ public class UIBackendController {
     /**
      * Delete a product from the cart.
      * 
-     * @param session  http session of user
+     * @param sessionId sessionId of user
      * @param products products products to be deleted, including the number of
      *                 units
      */
     @PostMapping("/products/delete")
-    public void deleteItemsFromCart(@RequestHeader(HttpHeaders.COOKIE) String sessionId, @RequestBody CartContent products) {
+    public void deleteItemsFromCart(@RequestHeader(HttpHeaders.COOKIE) String sessionId,
+            @RequestBody CartContent products) {
+
         for (Entry<String, Integer> product : products.getContent().entrySet()) {
             try {
                 service.deleteItemFromCart(sessionId, product.getKey(), product.getValue());
@@ -114,7 +116,7 @@ public class UIBackendController {
     /**
      * Get a list of all products in users cart.
      * 
-     * @param session http session of user
+     * @param sessionId sessionId of user
      * @return a list of all products in the users cart.
      */
     @GetMapping("/cart")
@@ -129,12 +131,13 @@ public class UIBackendController {
      * invalidated. if the user wants to place another order he needs a new http
      * session.
      * 
-     * @param session http session of user
+     * @param sessionId sessionId of user
      * @param request payment details
      * @throws OrderNotPlacedException if the order could not be placed.
      */
     @PostMapping("/confirm")
-    public void confirmOrder(@RequestHeader(HttpHeaders.COOKIE) String sessionId, @RequestBody OrderRequest request) throws OrderNotPlacedException, CartInteractionFailedException {
+    public void confirmOrder(@RequestHeader(HttpHeaders.COOKIE) String sessionId, @RequestBody OrderRequest request)
+            throws OrderNotPlacedException, CartInteractionFailedException {
         service.confirmOrder(sessionId, request.getCardNumber(), request.getCardOwner(), request.getChecksum());
         service.deleteCart(sessionId);
         // session stops after order is placed.
@@ -148,13 +151,15 @@ public class UIBackendController {
      */
     @GetMapping("/")
     public String greetingsWithHeaders(@RequestHeader(HttpHeaders.COOKIE) String sessionId) {
-        //return "Friendly reetings from UI Backend to session " + headers.getFirst(HttpHeaders.COOKIE) + " [ " + headers.getFirst("sessionid") + " ]";
+        // return "Friendly reetings from UI Backend to session " +
+        // headers.getFirst(HttpHeaders.COOKIE) + " [ " + headers.getFirst("sessionid")
+        // + " ]";
         return "Friendly Greetings for " + sessionId;
     }
 
     /**
-     * Creates the response entity if a request could not be served because placing an
-     * order failed.
+     * Creates the response entity if a request could not be served because placing
+     * an order failed.
      * 
      * @param exception
      * @return a response entity with an exceptional message
