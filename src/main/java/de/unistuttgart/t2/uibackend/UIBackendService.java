@@ -80,14 +80,70 @@ public class UIBackendService {
      * @return a list of all products in the inventory. (might be incomplete)
      */
     public List<Product> getAllProducts() {
-        LOG.debug("get from " + inventoryUrl);
-
         List<Product> rval = new ArrayList<>();
 
+        LOG.debug("get from " + inventoryUrl);
+
         try {
+
+            // first page
+            rval.addAll(getSomeProducts(inventoryUrl));
+
+            // additional pages
             ResponseEntity<String> response = Retry
                     .decorateSupplier(retry, () -> template.getForEntity(inventoryUrl, String.class)).get();
 
+            JsonNode root = mapper.readTree(response.getBody());
+
+            while (hasNext(root)) {
+                String url = getNext(root);
+                rval.addAll(getSomeProducts(url));
+
+                root = mapper
+                        .readTree(Retry.decorateSupplier(retry, () -> template.getForEntity(url, String.class))
+                                .get().getBody());
+
+            }
+
+        } catch (RestClientException e) { // 404 or something like that.
+            e.printStackTrace();
+        } catch (JsonProcessingException e) { // malformed JSON, or whatever :x
+            e.printStackTrace();
+        }
+        return rval;
+    }
+
+    /**
+     * Check whether there is another page after this in the inventory
+     * 
+     * @param root inventory page as json node 
+     * @return true iff there is a next page
+     */
+    private boolean hasNext(JsonNode root) {
+        JsonNode next = root.findPath("next");
+        if (next.isEmpty()) {
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Get the url to the next inventory page
+     * 
+     * @param root json node that contains url too next page
+     * @return url to next page
+     */
+    private String getNext(JsonNode root) {
+        JsonNode next = root.findPath("next").findPath("href");
+        return next.asText();
+    }
+
+    private List<Product> getSomeProducts(String url) {
+        List<Product> rval = new ArrayList<>();
+        ResponseEntity<String> response = Retry.decorateSupplier(retry, () -> template.getForEntity(url, String.class))
+                .get();
+
+        try {
             JsonNode root = mapper.readTree(response.getBody());
             JsonNode inventory = root.findPath("inventory");
 
@@ -100,11 +156,10 @@ public class UIBackendService {
                     e.printStackTrace(); // single malformed product, continue with next one
                 }
             }
-        } catch (RestClientException e) { // 404 or something like that.
-            e.printStackTrace();
-        } catch (JsonProcessingException e) { // malformed JSON, or whatever :x
-            e.printStackTrace();
+        } catch (JsonProcessingException e1) {
+            e1.printStackTrace();
         }
+
         return rval;
     }
 

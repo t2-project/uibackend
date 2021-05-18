@@ -128,7 +128,8 @@ public class UIBackendRequestTest {
     @Test
     public void testGetAllProducts() throws Exception {
 
-        mockServer.expect(ExpectedCount.once(), requestTo(inventoryUrl)).andExpect(method(HttpMethod.GET))
+        // twice = once for products and once for page
+        mockServer.expect(ExpectedCount.twice(), requestTo(inventoryUrl)).andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess(inventoryresponseAllProducts, MediaType.APPLICATION_JSON));
 
         // execute
