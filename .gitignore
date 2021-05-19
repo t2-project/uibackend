@@ -3,7 +3,7 @@
 .mvn/
 .project
 .settings/
-**/application.local.properties
-**/*_local.yml
+**/*.*.properties
+**/*_*.yml
 **/*.swp
 **/*.log
