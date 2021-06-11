@@ -51,7 +51,7 @@ public class UIBackenResponseTest {
 
     @Test
     public void getCartContentTest() {
-        ResponseEntity<String> entity = new ResponseEntity(JSONs.cartResponse, new HttpHeaders(), HttpStatus.OK);
+        ResponseEntity<String> entity = new ResponseEntity(JSONs.cartResponse(), new HttpHeaders(), HttpStatus.OK);
 
         Mockito.when((template.getForEntity(JSONs.cartUrl + JSONs.sessionId, String.class))).thenReturn(entity);
 
@@ -67,11 +67,11 @@ public class UIBackenResponseTest {
     @Test
     public void getProductsInCartTest() {
         // setup cart responses
-        ResponseEntity<String> cartEntity = new ResponseEntity(JSONs.cartResponse, new HttpHeaders(), HttpStatus.OK);
+        ResponseEntity<String> cartEntity = new ResponseEntity(JSONs.cartResponse(), new HttpHeaders(), HttpStatus.OK);
         Mockito.when((template.getForEntity(JSONs.cartUrl + JSONs.sessionId, String.class))).thenReturn(cartEntity);
 
         // setup inventory response
-        ResponseEntity<String> inventoryEntity = new ResponseEntity(JSONs.inventoryResponse, HttpStatus.OK);
+        ResponseEntity<String> inventoryEntity = new ResponseEntity(JSONs.inventoryResponse(), HttpStatus.OK);
         Mockito.when((template.getForEntity(JSONs.inventoryUrl + JSONs.productId, String.class)))
                 .thenReturn(inventoryEntity);
 
@@ -90,7 +90,7 @@ public class UIBackenResponseTest {
     @Test
     public void getSingleProductTest() {
         // setup inventory responses
-        ResponseEntity<String> entity = new ResponseEntity(JSONs.inventoryResponse, HttpStatus.OK);
+        ResponseEntity<String> entity = new ResponseEntity(inventoryResponse(), HttpStatus.OK);
         Mockito.when((template.getForEntity(JSONs.inventoryUrl + JSONs.productId, String.class))).thenReturn(entity);
 
         // execute
@@ -108,7 +108,7 @@ public class UIBackenResponseTest {
     @Test
     public void getAllProductsTest() {
         // setup inventory responses
-        ResponseEntity<String> entity = new ResponseEntity(JSONs.inventoryresponseAllProducts, HttpStatus.OK);
+        ResponseEntity<String> entity = new ResponseEntity(inventoryresponseAllProducts(), HttpStatus.OK);
         Mockito.when((template.getForEntity(JSONs.inventoryUrl, String.class))) // no id, we want ALL.
                 .thenReturn(entity);
 

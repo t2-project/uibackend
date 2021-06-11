@@ -68,12 +68,12 @@ public class UIBackendRequestRetryTest {
         // mock cart resonse (normal)
         mockServer.expect(ExpectedCount.once(), requestTo(JSONs.cartUrl + JSONs.sessionId))
                 .andExpect(method(HttpMethod.GET))
-                .andRespond(withSuccess(JSONs.cartResponse, MediaType.APPLICATION_JSON));
+                .andRespond(withSuccess(JSONs.cartResponse(), MediaType.APPLICATION_JSON));
 
         // mock inventory response (normal)
         mockServer.expect(ExpectedCount.once(), requestTo(JSONs.inventoryUrl + JSONs.productId))
                 .andExpect(method(HttpMethod.GET))
-                .andRespond(withSuccess(JSONs.inventoryResponse, MediaType.APPLICATION_JSON));
+                .andRespond(withSuccess(JSONs.inventoryResponse(), MediaType.APPLICATION_JSON));
 
         // what i actually want : verify request to orchestrator (failed)
         mockServer.expect(ExpectedCount.twice(), requestTo(JSONs.orchestratorUrl))
@@ -136,7 +136,7 @@ public class UIBackendRequestRetryTest {
     @Test
     public void testAddItemToCart_failAtCart() throws Exception {
         mockServer.expect(ExpectedCount.once(), requestTo(cartUrl + sessionId)).andExpect(method(HttpMethod.GET))
-                .andRespond(withSuccess(cartResponse, MediaType.APPLICATION_JSON));
+                .andRespond(withSuccess(cartResponse(), MediaType.APPLICATION_JSON));
 
         mockServer.expect(ExpectedCount.once(), requestTo(cartUrl + sessionId))
                 .andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR));
@@ -150,7 +150,7 @@ public class UIBackendRequestRetryTest {
     @Test
     public void testDeleteItemFromCart_failAtCart() throws Exception {
         mockServer.expect(ExpectedCount.once(), requestTo(cartUrl + sessionId)).andExpect(method(HttpMethod.GET))
-                .andRespond(withSuccess(cartResponse, MediaType.APPLICATION_JSON));
+                .andRespond(withSuccess(cartResponse(), MediaType.APPLICATION_JSON));
 
         mockServer.expect(ExpectedCount.twice(), requestTo(cartUrl + sessionId))
                 .andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR));
@@ -172,7 +172,7 @@ public class UIBackendRequestRetryTest {
     @Test
     public void testGetProductsInCart_failAtInventory() throws Exception {
         mockServer.expect(ExpectedCount.once(), requestTo(cartUrl + sessionId)).andExpect(method(HttpMethod.GET))
-                .andRespond(withSuccess(cartResponseMulti, MediaType.APPLICATION_JSON));
+                .andRespond(withSuccess(cartResponseMulti(), MediaType.APPLICATION_JSON));
 
         mockServer.expect(ExpectedCount.twice(), requestTo(inventoryUrl + productId))
                 .andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR));

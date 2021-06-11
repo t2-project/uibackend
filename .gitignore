@@ -1,6 +1,5 @@
 /target/
 .classpath
-.mvn/
 .project
 .settings/
 **/*.*.properties
