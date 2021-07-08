@@ -1,0 +1,30 @@
+# put the trailing '/' there
+t2:
+  orchestrator:
+    url: ${T2_ORCHESTRATOR_URL}
+  cart:
+    url: ${T2_CART_URL}
+  inventory:
+    url: ${T2_INVENTORY_URL}
+    reservationendpoint: ${T2_RESERVATION_ENDPOINT} 
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: prometheus
+    health:
+      show-details: always
+  metrics:
+    tags:
+      application: uibackend
+    distribution:
+      percentiles:
+        all: 0.5, 0.75, 0.95, 0.98, 0.99, 0.999, 1.0
+
+opentracing:
+  jaeger:
+    service-name: uibackend
+    enabled: TRUE
+    udp-sender:
+      host: ${JAEGER_HOST}
