@@ -2,107 +2,197 @@ package de.unistuttgart.t2.uibackend;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
-import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpSession;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 
 import de.unistuttgart.t2.common.CartContent;
 import de.unistuttgart.t2.common.OrderRequest;
 import de.unistuttgart.t2.common.Product;
+import de.unistuttgart.t2.uibackend.exceptions.CartInteractionFailedException;
 import de.unistuttgart.t2.uibackend.exceptions.OrderNotPlacedException;
 import de.unistuttgart.t2.uibackend.exceptions.ReservationFailedException;
 
+/**
+ * Defines the http enpoints of the UIBackend.
+ * 
+ * @author maumau
+ *
+ */
 @RestController
 public class UIBackendController {
 
-	@Autowired
-	private UIBackendService service;
+    @Autowired
+    private UIBackendService service;
 
-	@GetMapping("/products/all")
-	public List<Product> getAllProducts() {
-		return service.getAllProducts();
-	}
+    /**
+     * Get a list of all products in the inventory.
+     * 
+     * The session exists such that i can get a cookie even though i am not using
+     * the ui (frontend), e.g. as the load generator does.
+     * 
+     * @param session http session
+     * @return a list of all product in the inventory.
+     */
+    @GetMapping("/products/all")
+    public List<Product> getAllProducts(HttpSession session) {
+        return service.getAllProducts();
+    }
 
-	@PostMapping("/products/add")
-	public List<Product> addItemsToCart(HttpSession session, @RequestBody CartContent products) throws ReservationFailedException {
-		List<Product> successfullyAddedProducts = new ArrayList<>();
-		
-		StringBuilder failures = new StringBuilder(); 
+    /**
+     * Add units of the given products to the cart.
+     * 
+     * <p>
+     * Only add the products to the cart if the requested number of unit is
+     * available. To achieve this, at first a reservations are placed in the
+     * inventory and only after the reservations are succeeded be are the products
+     * added to the cart.
+     * 
+     * <p>
+     * Replies as long as at least on product is added to the cart.
+     * 
+     * @param sessionId sessionId of user
+     * @param products products to be added, including the number of units thereof
+     * @return a list of all products that were added with {@code units} being the
+     *         number of unit that were added / reserved.
+     * @throws ReservationFailedException if all reservations failed.
+     */
+    @PostMapping("/products/add")
+    public List<Product> addItemsToCart(@RequestHeader(HttpHeaders.COOKIE) String sessionId,
+            @RequestBody CartContent products) throws ReservationFailedException, CartInteractionFailedException {
+        List<Product> successfullyAddedProducts = new ArrayList<>();
 
-		for (Entry<String, Integer> product : products.getContent().entrySet()) {
-			try {
-				// contact inventory first, cause i'd rather have a dangling reservation than
-				// thing in the cart that are not backed with reservations
-				Product addedProduct = service.makeReservations(session.getId(), product.getKey(), product.getValue());
-				service.addItemToCart(session.getId(), product.getKey(), product.getValue());
-				successfullyAddedProducts.add(addedProduct);
+        for (Entry<String, Integer> product : products.getContent().entrySet()) {
+            if (product.getValue() == 0) {
+                continue;
+            }
+            try {
+                // contact inventory first, cause i'd rather have a dangling reservation than a
+                // products in the cart that are not backed with reservations.
+                Product addedProduct = service.makeReservations(sessionId, product.getKey(), product.getValue());
+                service.addItemToCart(sessionId, product.getKey(), product.getValue());
+                successfullyAddedProducts.add(addedProduct);
 
-			} catch (ReservationFailedException e) {
-				failures.append(e.getMessage()).append("\n");
-			}
-		}
-		
-		if (failures.length() > 0) {
-			throw new ReservationFailedException(failures.toString());
-		}
-		
-		return successfullyAddedProducts;
-	}
+            } catch (ReservationFailedException e) {
+                e.printStackTrace();
+            }
+        }
 
-	@PostMapping("/products/delete")
-	public void deleteItemsFromCart(HttpSession session, @RequestBody CartContent products) {
-		// might leave dangling reservations :/
-		for (Entry<String, Integer> product : products.getContent().entrySet()) {
-			try {
-				service.deleteItemFromCart(session.getId(), product.getKey(), product.getValue());
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-		}
-	}
+        return successfullyAddedProducts;
+    }
 
-	@GetMapping("/cart")
-	public List<Product> getCart(HttpSession session) {
-		return service.getProductsInCart(session.getId());
-	}
+    /**
+     * Delete a product from the cart.
+     * 
+     * @param sessionId sessionId of user
+     * @param products products products to be deleted, including the number of
+     *                 units
+     */
+    @PostMapping("/products/delete")
+    public void deleteItemsFromCart(@RequestHeader(HttpHeaders.COOKIE) String sessionId,
+            @RequestBody CartContent products) {
 
-	@PostMapping("/confirm")
-	public void confirmOrder(HttpSession session, @RequestBody OrderRequest request) throws OrderNotPlacedException {
-		service.confirmOrder(session.getId(), request.getCardNumber(), request.getCardOwner(), request.getChecksum());
-		service.deleteCart(session.getId());
-		// session stops after order is placed.
-		session.invalidate();
-	}
+        for (Entry<String, Integer> product : products.getContent().entrySet()) {
+            try {
+                service.deleteItemFromCart(sessionId, product.getKey(), product.getValue());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
 
-	@GetMapping("/")
-	public String index() {
-		return "Greetings from UI Backend :)";
-	}
+    /**
+     * Get a list of all products in users cart.
+     * 
+     * @param sessionId sessionId of user
+     * @return a list of all products in the users cart.
+     */
+    @GetMapping("/cart")
+    public List<Product> getCart(@RequestHeader(HttpHeaders.COOKIE) String sessionId) {
+        return service.getProductsInCart(sessionId);
+    }
 
-	@ExceptionHandler(OrderNotPlacedException.class)
-	@ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-	public ResponseEntity<String> handleOrderNotPlacesException(OrderNotPlacedException exception) {
-		return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(exception.getMessage());
-	}
-	
-	@ExceptionHandler(ReservationFailedException.class)
-	@ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-	public ResponseEntity<String> handleReservationFailedException(ReservationFailedException exception) {
-		return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(exception.getMessage());
-	}
+    /**
+     * place an order, i.e. start a transaction.
+     * 
+     * upon successfully placing the order the cart is cleared and the session gets
+     * invalidated. if the user wants to place another order he needs a new http
+     * session.
+     * 
+     * @param sessionId sessionId of user
+     * @param request payment details
+     * @throws OrderNotPlacedException if the order could not be placed.
+     */
+    @PostMapping("/confirm")
+    public void confirmOrder(@RequestHeader(HttpHeaders.COOKIE) String sessionId, @RequestBody OrderRequest request)
+            throws OrderNotPlacedException, CartInteractionFailedException {
+        service.confirmOrder(sessionId, request.getCardNumber(), request.getCardOwner(), request.getChecksum());
+        service.deleteCart(sessionId);
+        // session stops after order is placed.
+        // session.invalidate();
+    }
+
+    /**
+     * Greets in a friendly manner.
+     * 
+     * @return a friendly greeting
+     */
+    @GetMapping("/")
+    public String greetingsWithHeaders(@RequestHeader(HttpHeaders.COOKIE) String sessionId) {
+        // return "Friendly reetings from UI Backend to session " +
+        // headers.getFirst(HttpHeaders.COOKIE) + " [ " + headers.getFirst("sessionid")
+        // + " ]";
+        return "Friendly Greetings for " + sessionId;
+    }
+
+    /**
+     * Creates the response entity if a request could not be served because placing
+     * an order failed.
+     * 
+     * @param exception
+     * @return a response entity with an exceptional message
+     */
+    @ExceptionHandler(OrderNotPlacedException.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public ResponseEntity<String> handleOrderNotPlacesException(OrderNotPlacedException exception) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(exception.getMessage());
+    }
+
+    /**
+     * Creates the response entity if a request could not be served because of a
+     * failed reservation.
+     * 
+     * @param exception
+     * @return a response entity with an exceptional message
+     */
+    @ExceptionHandler(ReservationFailedException.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public ResponseEntity<String> handleReservationFailedException(ReservationFailedException exception) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(exception.getMessage());
+    }
+
+    /**
+     * Creates the response entity if a request could not be served because the
+     * interaction with the cart service failed.
+     * 
+     * @param exception
+     * @return a response entity with an exceptional message
+     */
+    @ExceptionHandler(CartInteractionFailedException.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public ResponseEntity<String> handleCartInteractionFailedException(CartInteractionFailedException exception) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(exception.getMessage());
+    }
 }
