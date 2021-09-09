@@ -33,12 +33,12 @@
         <dependency>
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-registry-prometheus</artifactId>
-            <version>1.5.5</version>
+            <version>${MICROMETER_VERSION}</version>
         </dependency>
         <dependency>
 	        <groupId>io.opentracing.contrib</groupId>
 		    <artifactId>opentracing-spring-jaeger-cloud-starter</artifactId>
-    		<version>3.2.0</version>
+			<version>${JAEGER_VERSION}</version>
 	    </dependency>
 		<!-- end::actuator[] -->
 
