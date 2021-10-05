@@ -3,6 +3,7 @@
 .project
 .settings/
 **/*.*.properties
-**/*_*.yml
+**/*local.yml
+**/*local.yaml
 **/*.swp
 **/*.log
