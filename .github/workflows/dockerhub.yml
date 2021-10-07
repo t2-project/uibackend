@@ -12,7 +12,7 @@ jobs:
          echo "JAEGER_VERSION=${{secrets.JAEGER_VERSION}}" >> $GITHUB_ENV
          echo "JACOCO_VERSION=${{secrets.JACOCO_VERSION}}" >> $GITHUB_ENV
          echo "RESILIENCE4J_VERSION=${{secrets.RESILIENCE4J_VERSION}}" >> $GITHUB_ENV
-         echo "JUNIT4_VERSION=${{secrets.JUNIT4_VERSION}}" >> $GITHUB_ENV
+         echo "SPRINGDOC_VERSION=${{secrets.SPRINGDOC_VERSION}}" >> $GITHUB_ENV
          echo "TRAM_PARTICIPANT_VERSION=${{secrets.TRAM_PARTICIPANT_VERSION}}" >> $GITHUB_ENV
          echo "MICROMETER_VERSION=${{secrets.MICROMETER_VERSION}}" >> $GITHUB_ENV
     - name: Login to DockerHub
