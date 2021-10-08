@@ -221,7 +221,7 @@ public class UIBackendService {
         if (optCartContent.isPresent()) {
             try {
                 CartContent cartContent = optCartContent.get();
-                Integer remainingUnitsInCart = cartContent.getUnits(productId) - units;
+                Integer remainingUnitsInCart = cartContent.getUnits(productId) + units;
                 if (remainingUnitsInCart > 0) {
                     cartContent.getContent().put(productId, remainingUnitsInCart);
                 } else {

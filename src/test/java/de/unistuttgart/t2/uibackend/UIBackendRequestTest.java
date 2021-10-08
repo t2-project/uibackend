@@ -79,6 +79,11 @@ public class UIBackendRequestTest {
         // what i actually want : verify request to orchestrator
         mockServer.expect(ExpectedCount.once(), requestTo(JSONs.orchestratorUrl)).andExpect(method(HttpMethod.POST))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.cardNumber").value("cardNumber"))
+                .andExpect(jsonPath("$.cardOwner").value("cardOwner"))
+                .andExpect(jsonPath("$.checksum").value("checksum"))
+                .andExpect(jsonPath("$.sessionId").value(JSONs.sessionId))
+                .andExpect(jsonPath("$.total").value(42))
                 .andExpect(content().json(mapper.writeValueAsString(reqest))).andRespond(withStatus(HttpStatus.OK));
 
         // execute
@@ -131,7 +136,7 @@ public class UIBackendRequestTest {
         // twice = once for products and once for page
         mockServer.expect(ExpectedCount.twice(), requestTo(inventoryUrl)).andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess(inventoryresponseAllProducts(), MediaType.APPLICATION_JSON));
-
+        
         // execute
         service.getAllProducts();
         mockServer.verify();

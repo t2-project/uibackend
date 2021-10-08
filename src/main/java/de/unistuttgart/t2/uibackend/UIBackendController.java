@@ -4,23 +4,20 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
 
-import javax.servlet.http.HttpSession;
-
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-import de.unistuttgart.t2.common.CartContent;
 import de.unistuttgart.t2.common.OrderRequest;
 import de.unistuttgart.t2.common.Product;
+import de.unistuttgart.t2.common.UpdateCartRequest;
 import de.unistuttgart.t2.uibackend.exceptions.CartInteractionFailedException;
 import de.unistuttgart.t2.uibackend.exceptions.OrderNotPlacedException;
 import de.unistuttgart.t2.uibackend.exceptions.ReservationFailedException;
@@ -34,9 +31,12 @@ import de.unistuttgart.t2.uibackend.exceptions.ReservationFailedException;
 @RestController
 public class UIBackendController {
 
-    @Autowired
     private UIBackendService service;
 
+    public UIBackendController(@Autowired UIBackendService service) {
+        this.service = service;
+    }
+    
     /**
      * Get a list of all products in the inventory.
      * 
@@ -46,8 +46,8 @@ public class UIBackendController {
      * @param session http session
      * @return a list of all product in the inventory.
      */
-    @GetMapping("/products/all")
-    public List<Product> getAllProducts(HttpSession session) {
+    @GetMapping("/products")
+    public List<Product> getAllProducts() {
         return service.getAllProducts();
     }
 
@@ -64,54 +64,44 @@ public class UIBackendController {
      * Replies as long as at least on product is added to the cart.
      * 
      * @param sessionId sessionId of user
-     * @param products products to be added, including the number of units thereof
+     * @param products  products to be added, including the number of units thereof
      * @return a list of all products that were added with {@code units} being the
      *         number of unit that were added / reserved.
      * @throws ReservationFailedException if all reservations failed.
      */
-    @PostMapping("/products/add")
-    public List<Product> addItemsToCart(@RequestHeader(HttpHeaders.COOKIE) String sessionId,
-            @RequestBody CartContent products) throws ReservationFailedException, CartInteractionFailedException {
+    @PostMapping("/cart/{sessionId}")
+    public List<Product> updateCart(@PathVariable String sessionId, @RequestBody UpdateCartRequest updateCartRequest)
+            throws ReservationFailedException, CartInteractionFailedException {
         List<Product> successfullyAddedProducts = new ArrayList<>();
 
-        for (Entry<String, Integer> product : products.getContent().entrySet()) {
+        for (Entry<String, Integer> product : updateCartRequest.getContent().entrySet()) {
             if (product.getValue() == 0) {
                 continue;
             }
-            try {
-                // contact inventory first, cause i'd rather have a dangling reservation than a
-                // products in the cart that are not backed with reservations.
-                Product addedProduct = service.makeReservations(sessionId, product.getKey(), product.getValue());
-                service.addItemToCart(sessionId, product.getKey(), product.getValue());
-                successfullyAddedProducts.add(addedProduct);
+            if (product.getValue() > 0) {
+                try {
+                    // contact inventory first, cause i'd rather have a dangling reservation than a
+                    // products in the cart that are not backed with reservations.
+                    Product addedProduct = service.makeReservations(sessionId, product.getKey(),
+                            product.getValue());
+                    service.addItemToCart(sessionId, product.getKey(), product.getValue());
+                    successfullyAddedProducts.add(addedProduct);
 
-            } catch (ReservationFailedException e) {
-                e.printStackTrace();
+                } catch (ReservationFailedException e) {
+                    e.printStackTrace();
+                }
+            } else { //product.getValue() < 0
+                try {
+                    service.deleteItemFromCart(sessionId, product.getKey(), product.getValue());
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }                
             }
+            
         }
-
         return successfullyAddedProducts;
     }
 
-    /**
-     * Delete a product from the cart.
-     * 
-     * @param sessionId sessionId of user
-     * @param products products products to be deleted, including the number of
-     *                 units
-     */
-    @PostMapping("/products/delete")
-    public void deleteItemsFromCart(@RequestHeader(HttpHeaders.COOKIE) String sessionId,
-            @RequestBody CartContent products) {
-
-        for (Entry<String, Integer> product : products.getContent().entrySet()) {
-            try {
-                service.deleteItemFromCart(sessionId, product.getKey(), product.getValue());
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-    }
 
     /**
      * Get a list of all products in users cart.
@@ -119,8 +109,8 @@ public class UIBackendController {
      * @param sessionId sessionId of user
      * @return a list of all products in the users cart.
      */
-    @GetMapping("/cart")
-    public List<Product> getCart(@RequestHeader(HttpHeaders.COOKIE) String sessionId) {
+    @GetMapping("/cart/{sessionId}")
+    public List<Product> getCart(@PathVariable String sessionId) {
         return service.getProductsInCart(sessionId);
     }
 
@@ -131,30 +121,15 @@ public class UIBackendController {
      * invalidated. if the user wants to place another order he needs a new http
      * session.
      * 
-     * @param sessionId sessionId of user
-     * @param request payment details
+     * @param request request to place an Order
      * @throws OrderNotPlacedException if the order could not be placed.
      */
     @PostMapping("/confirm")
-    public void confirmOrder(@RequestHeader(HttpHeaders.COOKIE) String sessionId, @RequestBody OrderRequest request)
+    public void confirmOrder(@RequestBody OrderRequest request)
             throws OrderNotPlacedException, CartInteractionFailedException {
-        service.confirmOrder(sessionId, request.getCardNumber(), request.getCardOwner(), request.getChecksum());
-        service.deleteCart(sessionId);
-        // session stops after order is placed.
-        // session.invalidate();
-    }
-
-    /**
-     * Greets in a friendly manner.
-     * 
-     * @return a friendly greeting
-     */
-    @GetMapping("/")
-    public String greetingsWithHeaders(@RequestHeader(HttpHeaders.COOKIE) String sessionId) {
-        // return "Friendly reetings from UI Backend to session " +
-        // headers.getFirst(HttpHeaders.COOKIE) + " [ " + headers.getFirst("sessionid")
-        // + " ]";
-        return "Friendly Greetings for " + sessionId;
+        service.confirmOrder(request.getSessionId(), request.getCardNumber(), request.getCardOwner(),
+                request.getChecksum());
+        service.deleteCart(request.getSessionId());
     }
 
     /**
