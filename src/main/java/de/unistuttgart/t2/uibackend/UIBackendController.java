@@ -21,6 +21,12 @@ import de.unistuttgart.t2.common.UpdateCartRequest;
 import de.unistuttgart.t2.uibackend.exceptions.CartInteractionFailedException;
 import de.unistuttgart.t2.uibackend.exceptions.OrderNotPlacedException;
 import de.unistuttgart.t2.uibackend.exceptions.ReservationFailedException;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 
 /**
  * Defines the http enpoints of the UIBackend.
@@ -36,7 +42,7 @@ public class UIBackendController {
     public UIBackendController(@Autowired UIBackendService service) {
         this.service = service;
     }
-    
+
     /**
      * Get a list of all products in the inventory.
      * 
@@ -46,33 +52,37 @@ public class UIBackendController {
      * @param session http session
      * @return a list of all product in the inventory.
      */
+    @Operation(summary = "List all product in store", description = "List all product in store")
     @GetMapping("/products")
     public List<Product> getAllProducts() {
         return service.getAllProducts();
     }
 
     /**
-     * Add units of the given products to the cart.
+     * Update units of the given products to the cart.
      * 
      * <p>
-     * Only add the products to the cart if the requested number of unit is
-     * available. To achieve this, at first a reservations are placed in the
-     * inventory and only after the reservations are succeeded be are the products
-     * added to the cart.
+     * Add something to the cart, if the number of units is positive or delete from
+     * the cart when it is negative. Only add the products to the cart if the
+     * requested number of unit is available. To achieve this, at first a
+     * reservations are placed in the inventory and only after the reservations are
+     * succeeded be are the products added to the cart.
      * 
-     * <p>
-     * Replies as long as at least on product is added to the cart.
-     * 
-     * @param sessionId sessionId of user
-     * @param products  products to be added, including the number of units thereof
-     * @return a list of all products that were added with {@code units} being the
-     *         number of unit that were added / reserved.
-     * @throws ReservationFailedException if all reservations failed.
+     * @param sessionId         sessionId to identify the user's cart
+     * @param updateCartRequest request that contains the id of the products to be
+     *                          updated and the number of units to be added or
+     *                          deleted
+     * @return list of successfully added items
      */
+    @Operation(summary = "Update items in cart", description = "List all product in store")
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(content = @Content(examples = @ExampleObject(value = "{\n"
+            + "  \"content\": {\n" + "    \"prodcut-id\": 3\n" + "  }\n" + "}")))
+    @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "Cart updated") })
     @PostMapping("/cart/{sessionId}")
-    public List<Product> updateCart(@PathVariable String sessionId, @RequestBody UpdateCartRequest updateCartRequest)
-            throws ReservationFailedException, CartInteractionFailedException {
+    public List<Product> updateCart(@PathVariable String sessionId, @RequestBody UpdateCartRequest updateCartRequest) {
         List<Product> successfullyAddedProducts = new ArrayList<>();
+
+        List<Exception> exceptions = new ArrayList<>();
 
         for (Entry<String, Integer> product : updateCartRequest.getContent().entrySet()) {
             if (product.getValue() == 0) {
@@ -82,26 +92,23 @@ public class UIBackendController {
                 try {
                     // contact inventory first, cause i'd rather have a dangling reservation than a
                     // products in the cart that are not backed with reservations.
-                    Product addedProduct = service.makeReservations(sessionId, product.getKey(),
-                            product.getValue());
+                    Product addedProduct = service.makeReservations(sessionId, product.getKey(), product.getValue());
                     service.addItemToCart(sessionId, product.getKey(), product.getValue());
                     successfullyAddedProducts.add(addedProduct);
 
-                } catch (ReservationFailedException e) {
-                    e.printStackTrace();
+                } catch (ReservationFailedException | CartInteractionFailedException e) {
+                    exceptions.add(e);
                 }
-            } else { //product.getValue() < 0
+            } else { // product.getValue() < 0
                 try {
                     service.deleteItemFromCart(sessionId, product.getKey(), product.getValue());
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }                
+                } catch (CartInteractionFailedException e) {
+                    exceptions.add(e);
+                }
             }
-            
         }
         return successfullyAddedProducts;
     }
-
 
     /**
      * Get a list of all products in users cart.
@@ -109,6 +116,7 @@ public class UIBackendController {
      * @param sessionId sessionId of user
      * @return a list of all products in the users cart.
      */
+    @Operation(summary = "List all items in cart", description = "List all items in cart")
     @GetMapping("/cart/{sessionId}")
     public List<Product> getCart(@PathVariable String sessionId) {
         return service.getProductsInCart(sessionId);
@@ -124,12 +132,14 @@ public class UIBackendController {
      * @param request request to place an Order
      * @throws OrderNotPlacedException if the order could not be placed.
      */
+    @Operation(summary = "Order all items in the cart", description = "Order all items in the cart")
+    @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "Order for items is placed"),
+            @ApiResponse(responseCode = "500", description = "Order could not be placed") })
     @PostMapping("/confirm")
     public void confirmOrder(@RequestBody OrderRequest request)
-            throws OrderNotPlacedException, CartInteractionFailedException {
+            throws OrderNotPlacedException {
         service.confirmOrder(request.getSessionId(), request.getCardNumber(), request.getCardOwner(),
                 request.getChecksum());
-        service.deleteCart(request.getSessionId());
     }
 
     /**
