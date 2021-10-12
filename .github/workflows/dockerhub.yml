@@ -47,5 +47,5 @@ jobs:
         echo ${{ env.RELEASE_VERSION }}
         echo $RELEASE_VERSION
         cd uibackend
-        docker build -t stiesssh/uibackend:${{ env.RELEASE_VERSION }} .
-        docker push stiesssh/uibackend:${{ env.RELEASE_VERSION }}
+        docker build -t t2project/uibackend:${{ env.RELEASE_VERSION }} .
+        docker push t2project/uibackend:${{ env.RELEASE_VERSION }}
