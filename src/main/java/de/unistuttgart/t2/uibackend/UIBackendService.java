@@ -99,9 +99,8 @@ public class UIBackendService {
                 String url = getNext(root);
                 rval.addAll(getSomeProducts(url));
 
-                root = mapper
-                        .readTree(Retry.decorateSupplier(retry, () -> template.getForEntity(url, String.class))
-                                .get().getBody());
+                root = mapper.readTree(
+                        Retry.decorateSupplier(retry, () -> template.getForEntity(url, String.class)).get().getBody());
 
             }
 
@@ -116,7 +115,7 @@ public class UIBackendService {
     /**
      * Check whether there is another page after this in the inventory
      * 
-     * @param root inventory page as json node 
+     * @param root inventory page as json node
      * @return true iff there is a next page
      */
     private boolean hasNext(JsonNode root) {
@@ -311,6 +310,10 @@ public class UIBackendService {
     /**
      * Posts a request to start a transaction to the orchestrator.
      * 
+     * Attempts to delete the cart of the given sessionId once the orchestrator
+     * accepted the request. Nothing happens if the deletion of a cart fails, as the
+     * cart service supposed to periodically remove out dated cart entries anyway.
+     * 
      * @param sessionId  identifies the session
      * @param cardNumber part of payment details
      * @param cardOwner  part of payment details
@@ -321,29 +324,31 @@ public class UIBackendService {
         // is it more reasonable to get total from cart service, or is it more
         // reasonable to pass the total from the front end (where it was displayed and
         // therefore is known) ??
-
-        int total = getTotal(sessionId);
+        double total = getTotal(sessionId);
 
         if (total <= 0) {
             throw new OrderNotPlacedException(String
                     .format("No Order placed for session %s. Cart is either empty or not available. ", sessionId));
         }
 
-        String ressourceUrl = orchestratorUrl;
-        LOG.debug("post to " + ressourceUrl);
-
         SagaRequest request = new SagaRequest(sessionId, cardNumber, cardOwner, checksum, total);
 
         try {
             ResponseEntity<Void> response = Retry
-                    .decorateSupplier(retry, () -> template.postForEntity(ressourceUrl, request, Void.class)).get();
+                    .decorateSupplier(retry, () -> template.postForEntity(orchestratorUrl, request, Void.class)).get();
 
-            LOG.info("orchestrator accepted request with status code : " + response.getStatusCode().toString());
+            LOG.info(String.format("orchestrator accepted request for session %s with status code %s ", sessionId,
+                    response.getStatusCode().toString()));
+
+            deleteCart(sessionId);
+            LOG.info("deleted cart for session " + sessionId);
 
         } catch (RestClientException e) {
-            LOG.info(e.getMessage());
+            LOG.info(String.format("Failed to contact orchestrator for session %s : %s", sessionId, e.getMessage()));
             throw new OrderNotPlacedException(
                     String.format("No Order placed for session %s. Orchestrator not available. ", sessionId));
+        } catch (CartInteractionFailedException e) {
+            LOG.info(String.format("Failed to delete cart for session %s", sessionId));
         }
     }
 
@@ -405,9 +410,11 @@ public class UIBackendService {
 
             return Optional.of(product);
         } catch (RestClientException e) { // 404 or something like that.
-            e.printStackTrace();
+            LOG.debug(String.format("get for %s failed: %s %s", productId, e.getClass().toGenericString(),
+                    e.getMessage()));
         } catch (JsonProcessingException e) { // whatever we received, it was no product.
-            e.printStackTrace();
+            LOG.debug(String.format("get for %s failed: %s %s", productId, e.getClass().toGenericString(),
+                    e.getMessage()));
         }
         return Optional.empty();
     }
@@ -434,16 +441,17 @@ public class UIBackendService {
      * 
      * <p>
      * Depends on the cart service to get the cart content and depends on the
-     * inventory service to get the price per unit. If either of them fails, the the
-     * returned total is 0.
+     * inventory service to get the price per unit. If either of them fails, the
+     * returned total is 0. This is because the store cannot handle partial orders.
+     * Its either ordering all items in the cart or none.
      * 
      * @param sessionId identifies the session to get total for
      * @return the total money to pay for products in the cart
      */
-    private int getTotal(String sessionId) {
+    private double getTotal(String sessionId) {
         CartContent cart = getCartContent(sessionId).orElse(new CartContent());
 
-        int total = 0;
+        double total = 0;
 
         for (String productId : cart.getProductIds()) {
             Optional<Product> product = getSingleProduct(productId);

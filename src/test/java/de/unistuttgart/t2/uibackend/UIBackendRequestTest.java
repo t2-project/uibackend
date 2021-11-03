@@ -86,6 +86,11 @@ public class UIBackendRequestTest {
                 .andExpect(jsonPath("$.total").value(42))
                 .andExpect(content().json(mapper.writeValueAsString(reqest))).andRespond(withStatus(HttpStatus.OK));
 
+        // mock delete cart
+        mockServer.expect(ExpectedCount.once(), requestTo(JSONs.cartUrl + JSONs.sessionId))
+                .andExpect(method(HttpMethod.DELETE))
+                .andRespond(withSuccess());
+        
         // execute
         service.confirmOrder(reqest.getSessionId(), reqest.getCardNumber(), reqest.getCardOwner(),
                 reqest.getChecksum());
