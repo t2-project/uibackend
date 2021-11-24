@@ -29,9 +29,12 @@ management:
     readinessState:
       enabled: true
 
-opentracing:
-  jaeger:
-    service-name: uibackend
-    enabled: TRUE
-    udp-sender:
-      host: ${JAEGER_HOST}
+spring:
+  application:
+    name: uibackend
+  sleuth:
+    enabled: true
+    sampler:
+      probability: 1
+  zipkin:
+    baseUrl: ${ZIPKIN_BASEURL}
