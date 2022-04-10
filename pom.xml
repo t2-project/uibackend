@@ -3,21 +3,14 @@
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-	<parent>
-		<groupId>org.springframework.boot</groupId>
-		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>2.4.3</version>
-		<relativePath /> <!-- lookup parent from repository -->
-	</parent>
-	<groupId>de.unistuttgart.t2</groupId>
-	<artifactId>uibackend</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
-	<name>uibackend</name>
-	<description>backend for ui</description>
 
-	<properties>
-		<java.version>11</java.version>
-	</properties>
+	<parent>
+		<groupId>de.unistuttgart.t2</groupId>
+		<artifactId>t2store</artifactId>
+		<version>${t2.version}</version>
+	</parent>
+	<artifactId>uibackend</artifactId>
+	<description>backend for ui</description>
 
 	<dependencies>
 		<dependency>
@@ -33,12 +26,12 @@
         <dependency>
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-registry-prometheus</artifactId>
-            <version>${MICROMETER_VERSION}</version>
+            <version>${micrometer.version}</version>
         </dependency>
         <dependency>
 	        <groupId>io.opentracing.contrib</groupId>
 		    <artifactId>opentracing-spring-jaeger-cloud-starter</artifactId>
-			<version>${JAEGER_VERSION}</version>
+			<version>${jaeger.version}</version>
 	    </dependency>
 		<!-- end::actuator[] -->
 
@@ -59,7 +52,7 @@
 		<dependency>
 			<groupId>de.unistuttgart.t2</groupId>
 			<artifactId>common</artifactId>
-			<version>1.0-SNAPSHOT</version>
+			<version>${t2.version}</version>
 		</dependency>
 
 		<!-- even more more tests -->
@@ -91,7 +84,7 @@
 		<dependency>
 			<groupId>io.github.resilience4j</groupId>
 			<artifactId>resilience4j-retry</artifactId>
-			<version>${RESILIENCE4J_VERSION}</version>
+			<version>${resilience4j.version}</version>
 		</dependency>
 	</dependencies>
 
@@ -104,7 +97,7 @@
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
-                <version>${JACOCO_VERSION}</version>
+                <version>${jacoco.version}</version>
                 <executions>
                     <execution>
                         <goals>
