@@ -33,7 +33,6 @@
         <dependency>
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-registry-prometheus</artifactId>
-            <version>${MICROMETER_VERSION}</version>
         </dependency>
         <dependency>
 	        <groupId>io.opentracing.contrib</groupId>
@@ -59,32 +58,29 @@
 		<dependency>
 			<groupId>de.unistuttgart.t2</groupId>
 			<artifactId>common</artifactId>
-			<version>1.0-SNAPSHOT</version>
+			<version>1.1-SNAPSHOT</version>
 		</dependency>
 
 		<!-- even more more tests -->
 		<dependency>
 			<groupId>org.junit.jupiter</groupId>
 			<artifactId>junit-jupiter-engine</artifactId>
-			<version>5.7.0</version>
 		</dependency>
 
 		<dependency>
 			<groupId>org.junit.platform</groupId>
 			<artifactId>junit-platform-engine</artifactId>
-			<version>1.7.0</version>
 		</dependency>
 
 		<dependency>
 			<groupId>org.mockito</groupId>
 			<artifactId>mockito-junit-jupiter</artifactId>
-			<version>3.6.0</version>
 		</dependency>
 
 		<dependency>
     		<groupId>org.springdoc</groupId>
     		<artifactId>springdoc-openapi-ui</artifactId>
-    		<version>1.5.2</version>
+    		<version>${SPRINGDOC_VERSION}</version>
 		</dependency>
 
 		<!-- circuitbreaker and others -->
