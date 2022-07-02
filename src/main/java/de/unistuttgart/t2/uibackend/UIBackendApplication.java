@@ -11,13 +11,9 @@ import io.swagger.v3.oas.models.*;
 import io.swagger.v3.oas.models.info.Info;
 
 /**
- * 
- * Interacts with other services to prepare data for the actual UI.
- * 
- * (If did it right, this service is a API Gateway)
+ * Interacts with other services to prepare data for the actual UI. (If did it right, this service is a API Gateway)
  * 
  * @author maumau
- *
  */
 @SpringBootApplication(scanBasePackageClasses = BaseScan.class)
 public class UIBackendApplication {
@@ -48,6 +44,6 @@ public class UIBackendApplication {
     @Bean
     public OpenAPI customOpenAPI() {
         return new OpenAPI().components(new Components())
-                .info(new Info().title("UIBackend service API").description("API of the T2 Store's UIbackend service."));
+            .info(new Info().title("UIBackend service API").description("API of the T2 Store's UIbackend service."));
     }
 }

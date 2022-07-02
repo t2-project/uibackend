@@ -32,7 +32,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
  * Defines the http enpoints of the UIBackend.
  * 
  * @author maumau
- *
  */
 @RestController
 public class UIBackendController {
@@ -44,10 +43,8 @@ public class UIBackendController {
     }
 
     /**
-     * Get a list of all products in the inventory.
-     * 
-     * The session exists such that i can get a cookie even though i am not using
-     * the ui (frontend), e.g. as the load generator does.
+     * Get a list of all products in the inventory. The session exists such that i can get a cookie even though i am not
+     * using the ui (frontend), e.g. as the load generator does.
      * 
      * @param session http session
      * @return a list of all product in the inventory.
@@ -60,23 +57,20 @@ public class UIBackendController {
 
     /**
      * Update units of the given products to the cart.
-     * 
      * <p>
-     * Add something to the cart, if the number of units is positive or delete from
-     * the cart when it is negative. Only add the products to the cart if the
-     * requested number of unit is available. To achieve this, at first a
-     * reservations are placed in the inventory and only after the reservations are
-     * succeeded be are the products added to the cart.
+     * Add something to the cart, if the number of units is positive or delete from the cart when it is negative. Only
+     * add the products to the cart if the requested number of unit is available. To achieve this, at first a
+     * reservations are placed in the inventory and only after the reservations are succeeded be are the products added
+     * to the cart.
      * 
      * @param sessionId         sessionId to identify the user's cart
-     * @param updateCartRequest request that contains the id of the products to be
-     *                          updated and the number of units to be added or
-     *                          deleted
+     * @param updateCartRequest request that contains the id of the products to be updated and the number of units to be
+     *                          added or deleted
      * @return list of successfully added items
      */
     @Operation(summary = "Update items in cart", description = "List all product in store")
     @io.swagger.v3.oas.annotations.parameters.RequestBody(content = @Content(examples = @ExampleObject(value = "{\n"
-            + "  \"content\": {\n" + "    \"prodcut-id\": 3\n" + "  }\n" + "}")))
+        + "  \"content\": {\n" + "    \"prodcut-id\": 3\n" + "  }\n" + "}")))
     @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "Cart updated") })
     @PostMapping("/cart/{sessionId}")
     public List<Product> updateCart(@PathVariable String sessionId, @RequestBody UpdateCartRequest updateCartRequest) {
@@ -123,28 +117,24 @@ public class UIBackendController {
     }
 
     /**
-     * place an order, i.e. start a transaction.
-     * 
-     * upon successfully placing the order the cart is cleared and the session gets
-     * invalidated. if the user wants to place another order he needs a new http
-     * session.
+     * place an order, i.e. start a transaction. upon successfully placing the order the cart is cleared and the session
+     * gets invalidated. if the user wants to place another order he needs a new http session.
      * 
      * @param request request to place an Order
      * @throws OrderNotPlacedException if the order could not be placed.
      */
     @Operation(summary = "Order all items in the cart", description = "Order all items in the cart")
     @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "Order for items is placed"),
-            @ApiResponse(responseCode = "500", description = "Order could not be placed") })
+                            @ApiResponse(responseCode = "500", description = "Order could not be placed") })
     @PostMapping("/confirm")
     public void confirmOrder(@RequestBody OrderRequest request)
-            throws OrderNotPlacedException {
+        throws OrderNotPlacedException {
         service.confirmOrder(request.getSessionId(), request.getCardNumber(), request.getCardOwner(),
-                request.getChecksum());
+            request.getChecksum());
     }
 
     /**
-     * Creates the response entity if a request could not be served because placing
-     * an order failed.
+     * Creates the response entity if a request could not be served because placing an order failed.
      * 
      * @param exception
      * @return a response entity with an exceptional message
@@ -156,8 +146,7 @@ public class UIBackendController {
     }
 
     /**
-     * Creates the response entity if a request could not be served because of a
-     * failed reservation.
+     * Creates the response entity if a request could not be served because of a failed reservation.
      * 
      * @param exception
      * @return a response entity with an exceptional message
@@ -169,8 +158,8 @@ public class UIBackendController {
     }
 
     /**
-     * Creates the response entity if a request could not be served because the
-     * interaction with the cart service failed.
+     * Creates the response entity if a request could not be served because the interaction with the cart service
+     * failed.
      * 
      * @param exception
      * @return a response entity with an exceptional message
