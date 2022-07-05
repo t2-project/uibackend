@@ -32,7 +32,6 @@ import io.github.resilience4j.retry.RetryRegistry;
  * Manages interaction with other services.
  * 
  * @author maumau
- *
  */
 public class UIBackendService {
 
@@ -42,7 +41,7 @@ public class UIBackendService {
     private final Logger LOG = LoggerFactory.getLogger(getClass());
 
     private final ObjectMapper mapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES,
-            false);
+        false);
 
     // they have all the trailing '/' and stuff.
     private String orchestratorUrl;
@@ -60,8 +59,8 @@ public class UIBackendService {
     public UIBackendService(String cartUrl, String inventoryUrl, String orchestratorUrl, String reservationEndpoint) {
         if (cartUrl == null || inventoryUrl == null || orchestratorUrl == null || reservationEndpoint == null) {
             throw new IllegalArgumentException(
-                    String.format("urls must not be 'null' but one of these is: %s, %s, %s, %s ", cartUrl, inventoryUrl,
-                            orchestratorUrl, reservationEndpoint));
+                String.format("urls must not be 'null' but one of these is: %s, %s, %s, %s ", cartUrl, inventoryUrl,
+                    orchestratorUrl, reservationEndpoint));
         }
         this.cartUrl = cartUrl;
         this.inventoryUrl = inventoryUrl;
@@ -70,12 +69,9 @@ public class UIBackendService {
     }
 
     /**
-     * 
      * Get a list of all products from the inventory.
-     * 
      * <p>
-     * TODO : the generated endpoints do things with pages. this gets the first
-     * twenty items only.
+     * TODO : the generated endpoints do things with pages. this gets the first twenty items only.
      * 
      * @return a list of all products in the inventory. (might be incomplete)
      */
@@ -91,7 +87,7 @@ public class UIBackendService {
 
             // additional pages
             ResponseEntity<String> response = Retry
-                    .decorateSupplier(retry, () -> template.getForEntity(inventoryUrl, String.class)).get();
+                .decorateSupplier(retry, () -> template.getForEntity(inventoryUrl, String.class)).get();
 
             JsonNode root = mapper.readTree(response.getBody());
 
@@ -100,7 +96,7 @@ public class UIBackendService {
                 rval.addAll(getSomeProducts(url));
 
                 root = mapper.readTree(
-                        Retry.decorateSupplier(retry, () -> template.getForEntity(url, String.class)).get().getBody());
+                    Retry.decorateSupplier(retry, () -> template.getForEntity(url, String.class)).get().getBody());
 
             }
 
@@ -140,7 +136,7 @@ public class UIBackendService {
     private List<Product> getSomeProducts(String url) {
         List<Product> rval = new ArrayList<>();
         ResponseEntity<String> response = Retry.decorateSupplier(retry, () -> template.getForEntity(url, String.class))
-                .get();
+            .get();
 
         try {
             JsonNode root = mapper.readTree(response.getBody());
@@ -163,18 +159,14 @@ public class UIBackendService {
     }
 
     /**
-     * 
      * Add the given number units of product to a users cart.
-     * 
      * <p>
-     * If the product is already in the cart, the units of that product will be
-     * updated.
+     * If the product is already in the cart, the units of that product will be updated.
      * 
      * @param sessionId identifies the cart to add to
      * @param productId id of product to be added
      * @param units     number of units to be added
-     * @throws CartInteractionFailedException if the request number of unit could
-     *                                        not be placed in the cart.
+     * @throws CartInteractionFailedException if the request number of unit could not be placed in the cart.
      */
     public void addItemToCart(String sessionId, String productId, Integer units) throws CartInteractionFailedException {
         String ressourceUrl = cartUrl + sessionId;
@@ -193,25 +185,23 @@ public class UIBackendService {
             }
         } catch (RestClientException e) {
             throw new CartInteractionFailedException(
-                    String.format("Could not add %d units of product %s to cart.", units, productId));
+                String.format("Could not add %d units of product %s to cart.", units, productId));
         }
     }
 
     /**
      * Delete the given number units of product from a users cart.
-     * 
      * <p>
-     * If the number of units in the cart decrease to zero or less, the product is
-     * remove from the cart. If the no such product is in cart, do nothing.
+     * If the number of units in the cart decrease to zero or less, the product is remove from the cart. If the no such
+     * product is in cart, do nothing.
      * 
      * @param sessionId identifies the cart to delete from
      * @param productId id of the product to be deleted
      * @param units     number of units to be deleted
-     * @throws CartInteractionFailedException if anything went wrong while talking
-     *                                        to the cart
+     * @throws CartInteractionFailedException if anything went wrong while talking to the cart
      */
     public void deleteItemFromCart(String sessionId, String productId, Integer units)
-            throws CartInteractionFailedException {
+        throws CartInteractionFailedException {
         String ressourceUrl = cartUrl + sessionId;
         LOG.debug("put to " + ressourceUrl);
 
@@ -230,7 +220,7 @@ public class UIBackendService {
             } catch (RestClientException e) {
                 LOG.info(e.getMessage());
                 throw new CartInteractionFailedException(
-                        String.format("Deletion for session %s failed : %s, %d", sessionId, productId, units));
+                    String.format("Deletion for session %s failed : %s, %d", sessionId, productId, units));
             }
         }
     }
@@ -239,8 +229,7 @@ public class UIBackendService {
      * Delete the entire cart for the given sessionId.
      * 
      * @param sessionId identifies the cart content to delete
-     * @throws CartInteractionFailedException if anything went wrong while talking
-     *                                        to the cart
+     * @throws CartInteractionFailedException if anything went wrong while talking to the cart
      */
     public void deleteCart(String sessionId) throws CartInteractionFailedException {
         String ressourceUrl = cartUrl + sessionId;
@@ -288,7 +277,7 @@ public class UIBackendService {
      * @throws ReservationFailedException if the reservation could not be placed
      */
     public Product makeReservations(String sessionId, String productId, Integer units)
-            throws ReservationFailedException {
+        throws ReservationFailedException {
 
         String ressourceUrl = inventoryUrl + reservationEndpoint;
         LOG.debug("post to " + ressourceUrl);
@@ -297,22 +286,20 @@ public class UIBackendService {
             ReservationRequest request = new ReservationRequest(productId, sessionId, units);
 
             ResponseEntity<Product> inventoryResponse = Retry
-                    .decorateSupplier(retry, () -> template.postForEntity(ressourceUrl, request, Product.class)).get();
+                .decorateSupplier(retry, () -> template.postForEntity(ressourceUrl, request, Product.class)).get();
 
             return inventoryResponse.getBody();
         } catch (RestClientException e) { // no reservation for what ever reason
             LOG.info(e.getMessage());
             throw new ReservationFailedException(
-                    String.format("Reservation for session %s failed : %s, %d", sessionId, productId, units));
+                String.format("Reservation for session %s failed : %s, %d", sessionId, productId, units));
         }
     }
 
     /**
-     * Posts a request to start a transaction to the orchestrator.
-     * 
-     * Attempts to delete the cart of the given sessionId once the orchestrator
-     * accepted the request. Nothing happens if the deletion of a cart fails, as the
-     * cart service supposed to periodically remove out dated cart entries anyway.
+     * Posts a request to start a transaction to the orchestrator. Attempts to delete the cart of the given sessionId
+     * once the orchestrator accepted the request. Nothing happens if the deletion of a cart fails, as the cart service
+     * supposed to periodically remove out dated cart entries anyway.
      * 
      * @param sessionId  identifies the session
      * @param cardNumber part of payment details
@@ -320,7 +307,7 @@ public class UIBackendService {
      * @param checksum   part of payment details
      */
     public void confirmOrder(String sessionId, String cardNumber, String cardOwner, String checksum)
-            throws OrderNotPlacedException {
+        throws OrderNotPlacedException {
         // is it more reasonable to get total from cart service, or is it more
         // reasonable to pass the total from the front end (where it was displayed and
         // therefore is known) ??
@@ -328,17 +315,17 @@ public class UIBackendService {
 
         if (total <= 0) {
             throw new OrderNotPlacedException(String
-                    .format("No Order placed for session %s. Cart is either empty or not available. ", sessionId));
+                .format("No Order placed for session %s. Cart is either empty or not available. ", sessionId));
         }
 
         SagaRequest request = new SagaRequest(sessionId, cardNumber, cardOwner, checksum, total);
 
         try {
             ResponseEntity<Void> response = Retry
-                    .decorateSupplier(retry, () -> template.postForEntity(orchestratorUrl, request, Void.class)).get();
+                .decorateSupplier(retry, () -> template.postForEntity(orchestratorUrl, request, Void.class)).get();
 
             LOG.info(String.format("orchestrator accepted request for session %s with status code %s ", sessionId,
-                    response.getStatusCode().toString()));
+                response.getStatusCode().toString()));
 
             deleteCart(sessionId);
             LOG.info("deleted cart for session " + sessionId);
@@ -346,7 +333,7 @@ public class UIBackendService {
         } catch (RestClientException e) {
             LOG.info(String.format("Failed to contact orchestrator for session %s : %s", sessionId, e.getMessage()));
             throw new OrderNotPlacedException(
-                    String.format("No Order placed for session %s. Orchestrator not available. ", sessionId));
+                String.format("No Order placed for session %s. Orchestrator not available. ", sessionId));
         } catch (CartInteractionFailedException e) {
             LOG.info(String.format("Failed to delete cart for session %s", sessionId));
         }
@@ -354,10 +341,9 @@ public class UIBackendService {
 
     /**
      * Get the content of the cart belonging to the given sessionId.
-     * 
      * <p>
-     * If there is either no cart content for the given sessionId, or the retrieval
-     * of the content failed, an empty optional is returned.
+     * If there is either no cart content for the given sessionId, or the retrieval of the content failed, an empty
+     * optional is returned.
      * 
      * @param sessionId
      * @return content of cart iff it exists
@@ -368,8 +354,8 @@ public class UIBackendService {
 
         try {
             ResponseEntity<String> response = Retry
-                    .decorateFunction(retry, (String url) -> template.getForEntity(url, String.class))
-                    .apply(ressourceUrl);
+                .decorateFunction(retry, (String url) -> template.getForEntity(url, String.class))
+                .apply(ressourceUrl);
 
             JsonNode root = mapper.readTree(response.getBody());
             JsonNode name = root.path("content");
@@ -385,10 +371,9 @@ public class UIBackendService {
 
     /**
      * Get the product with the given productId from the inventory.
-     * 
      * <p>
-     * If there is either no product with the given sessionId, or the retrieval of
-     * the product failed, an empty optional is returned.
+     * If there is either no product with the given sessionId, or the retrieval of the product failed, an empty optional
+     * is returned.
      * 
      * @param productId id of the product to be retrieved
      * @return product with given id iff it exists
@@ -399,8 +384,8 @@ public class UIBackendService {
 
         try {
             ResponseEntity<String> response = Retry
-                    .decorateFunction(retry, (String url) -> template.getForEntity(url, String.class))
-                    .apply(ressourceUrl);
+                .decorateFunction(retry, (String url) -> template.getForEntity(url, String.class))
+                .apply(ressourceUrl);
 
             // important, because inventory api may (did) return more fields than we need.
             mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
@@ -411,20 +396,18 @@ public class UIBackendService {
             return Optional.of(product);
         } catch (RestClientException e) { // 404 or something like that.
             LOG.debug(String.format("get for %s failed: %s %s", productId, e.getClass().toGenericString(),
-                    e.getMessage()));
+                e.getMessage()));
         } catch (JsonProcessingException e) { // whatever we received, it was no product.
             LOG.debug(String.format("get for %s failed: %s %s", productId, e.getClass().toGenericString(),
-                    e.getMessage()));
+                e.getMessage()));
         }
         return Optional.empty();
     }
 
     /**
      * Extracts the id under which a resource can be found from JSON.
-     * 
      * <p>
-     * TODO i'm pretty sure there are better ways to do this, but i didn't find
-     * them.
+     * TODO i'm pretty sure there are better ways to do this, but i didn't find them.
      * 
      * @param node a json node that contains a link to a resource
      * @return the resources id
@@ -438,11 +421,9 @@ public class UIBackendService {
 
     /**
      * Calculates the total of a users cart.
-     * 
      * <p>
-     * Depends on the cart service to get the cart content and depends on the
-     * inventory service to get the price per unit. If either of them fails, the
-     * returned total is 0. This is because the store cannot handle partial orders.
+     * Depends on the cart service to get the cart content and depends on the inventory service to get the price per
+     * unit. If either of them fails, the returned total is 0. This is because the store cannot handle partial orders.
      * Its either ordering all items in the cart or none.
      * 
      * @param sessionId identifies the session to get total for

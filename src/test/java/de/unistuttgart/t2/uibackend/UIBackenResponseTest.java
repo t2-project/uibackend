@@ -26,7 +26,6 @@ import de.unistuttgart.t2.uibackend.supplicants.JSONs;
 
 /**
  * Test whether UIBackendservice handles all responses correctly.
- * 
  * <p>
  * The Set up is like this:
  * <ul>
@@ -36,7 +35,6 @@ import de.unistuttgart.t2.uibackend.supplicants.JSONs;
  * </ul>
  * 
  * @author maumau
- *
  */
 @ExtendWith(SpringExtension.class)
 @ExtendWith(MockitoExtension.class)
@@ -47,7 +45,7 @@ public class UIBackenResponseTest {
 
     @InjectMocks // inject the mocked rest template into service
     private UIBackendService service = new UIBackendService(JSONs.cartUrl, JSONs.inventoryUrl, JSONs.orchestratorUrl,
-            JSONs.reservationEndpoint);
+        JSONs.reservationEndpoint);
 
     @Test
     public void getCartContentTest() {
@@ -73,7 +71,7 @@ public class UIBackenResponseTest {
         // setup inventory response
         ResponseEntity<String> inventoryEntity = new ResponseEntity(JSONs.inventoryResponse(), HttpStatus.OK);
         Mockito.when((template.getForEntity(JSONs.inventoryUrl + JSONs.productId, String.class)))
-                .thenReturn(inventoryEntity);
+            .thenReturn(inventoryEntity);
 
         // execute
         List<Product> products = service.getProductsInCart(JSONs.sessionId);
@@ -110,7 +108,7 @@ public class UIBackenResponseTest {
         // setup inventory responses
         ResponseEntity<String> entity = new ResponseEntity(inventoryresponseAllProducts(), HttpStatus.OK);
         Mockito.when((template.getForEntity(JSONs.inventoryUrl, String.class))) // no id, we want ALL.
-                .thenReturn(entity);
+            .thenReturn(entity);
 
         // execute
         List<Product> products = service.getAllProducts();
