@@ -1,27 +1,19 @@
 package de.unistuttgart.t2.uibackend;
 
 import static de.unistuttgart.t2.uibackend.supplicants.JSONs.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.Mockito;
+import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.web.client.RestTemplate;
 
-import de.unistuttgart.t2.common.CartContent;
-import de.unistuttgart.t2.common.Product;
+import de.unistuttgart.t2.common.*;
 import de.unistuttgart.t2.uibackend.supplicants.JSONs;
 
 /**
@@ -33,7 +25,7 @@ import de.unistuttgart.t2.uibackend.supplicants.JSONs;
  * <li>Mock the responses that the operation would receive from other services.
  * <li>Assert that the operation under test processes the replies as intended.
  * </ul>
- * 
+ *
  * @author maumau
  */
 @ExtendWith(SpringExtension.class)
@@ -44,14 +36,15 @@ public class UIBackenResponseTest {
     private RestTemplate template;
 
     @InjectMocks // inject the mocked rest template into service
-    private UIBackendService service = new UIBackendService(JSONs.cartUrl, JSONs.inventoryUrl, JSONs.orchestratorUrl,
-        JSONs.reservationEndpoint);
+    private final UIBackendService service =
+        new UIBackendService(JSONs.cartUrl, JSONs.inventoryUrl, JSONs.orchestratorUrl,
+            JSONs.reservationEndpoint);
 
     @Test
     public void getCartContentTest() {
-        ResponseEntity<String> entity = new ResponseEntity(JSONs.cartResponse(), new HttpHeaders(), HttpStatus.OK);
+        ResponseEntity<String> entity = new ResponseEntity<>(JSONs.cartResponse(), new HttpHeaders(), HttpStatus.OK);
 
-        Mockito.when((template.getForEntity(JSONs.cartUrl + JSONs.sessionId, String.class))).thenReturn(entity);
+        Mockito.when(template.getForEntity(JSONs.cartUrl + JSONs.sessionId, String.class)).thenReturn(entity);
 
         CartContent products = service.getCartContent(JSONs.sessionId).get();
 
@@ -65,12 +58,13 @@ public class UIBackenResponseTest {
     @Test
     public void getProductsInCartTest() {
         // setup cart responses
-        ResponseEntity<String> cartEntity = new ResponseEntity(JSONs.cartResponse(), new HttpHeaders(), HttpStatus.OK);
-        Mockito.when((template.getForEntity(JSONs.cartUrl + JSONs.sessionId, String.class))).thenReturn(cartEntity);
+        ResponseEntity<String> cartEntity =
+            new ResponseEntity<>(JSONs.cartResponse(), new HttpHeaders(), HttpStatus.OK);
+        Mockito.when(template.getForEntity(JSONs.cartUrl + JSONs.sessionId, String.class)).thenReturn(cartEntity);
 
         // setup inventory response
-        ResponseEntity<String> inventoryEntity = new ResponseEntity(JSONs.inventoryResponse(), HttpStatus.OK);
-        Mockito.when((template.getForEntity(JSONs.inventoryUrl + JSONs.productId, String.class)))
+        ResponseEntity<String> inventoryEntity = new ResponseEntity<>(JSONs.inventoryResponse(), HttpStatus.OK);
+        Mockito.when(template.getForEntity(JSONs.inventoryUrl + JSONs.productId, String.class))
             .thenReturn(inventoryEntity);
 
         // execute
@@ -88,8 +82,8 @@ public class UIBackenResponseTest {
     @Test
     public void getSingleProductTest() {
         // setup inventory responses
-        ResponseEntity<String> entity = new ResponseEntity(inventoryResponse(), HttpStatus.OK);
-        Mockito.when((template.getForEntity(JSONs.inventoryUrl + JSONs.productId, String.class))).thenReturn(entity);
+        ResponseEntity<String> entity = new ResponseEntity<>(inventoryResponse(), HttpStatus.OK);
+        Mockito.when(template.getForEntity(JSONs.inventoryUrl + JSONs.productId, String.class)).thenReturn(entity);
 
         // execute
         Product product = service.getSingleProduct(JSONs.productId).get();
@@ -106,8 +100,8 @@ public class UIBackenResponseTest {
     @Test
     public void getAllProductsTest() {
         // setup inventory responses
-        ResponseEntity<String> entity = new ResponseEntity(inventoryresponseAllProducts(), HttpStatus.OK);
-        Mockito.when((template.getForEntity(JSONs.inventoryUrl, String.class))) // no id, we want ALL.
+        ResponseEntity<String> entity = new ResponseEntity<>(inventoryresponseAllProducts(), HttpStatus.OK);
+        Mockito.when(template.getForEntity(JSONs.inventoryUrl, String.class)) // no id, we want ALL.
             .thenReturn(entity);
 
         // execute

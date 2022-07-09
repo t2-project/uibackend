@@ -59,8 +59,8 @@ public class UIBackendRequestTest {
     @Test
     public void testConfirmOrder() throws Exception {
 
-        SagaRequest reqest = new SagaRequest(JSONs.sessionId, "cardNumber", "cardOwner", "checksum", 42.0);
-        System.out.println(mapper.writeValueAsString(reqest));
+        SagaRequest request = new SagaRequest(JSONs.sessionId, "cardNumber", "cardOwner", "checksum", 42.0);
+        System.out.println(mapper.writeValueAsString(request));
 
         // mock cart response
         mockServer.expect(ExpectedCount.once(), requestTo(JSONs.cartUrl + JSONs.sessionId))
@@ -80,7 +80,7 @@ public class UIBackendRequestTest {
             .andExpect(jsonPath("$.checksum").value("checksum"))
             .andExpect(jsonPath("$.sessionId").value(JSONs.sessionId))
             .andExpect(jsonPath("$.total").value(42))
-            .andExpect(content().json(mapper.writeValueAsString(reqest))).andRespond(withStatus(HttpStatus.OK));
+            .andExpect(content().json(mapper.writeValueAsString(request))).andRespond(withStatus(HttpStatus.OK));
 
         // mock delete cart
         mockServer.expect(ExpectedCount.once(), requestTo(JSONs.cartUrl + JSONs.sessionId))
@@ -88,8 +88,8 @@ public class UIBackendRequestTest {
             .andRespond(withSuccess());
 
         // execute
-        service.confirmOrder(reqest.getSessionId(), reqest.getCardNumber(), reqest.getCardOwner(),
-            reqest.getChecksum());
+        service.confirmOrder(request.getSessionId(), request.getCardNumber(), request.getCardOwner(),
+            request.getChecksum());
         mockServer.verify();
     }
 
