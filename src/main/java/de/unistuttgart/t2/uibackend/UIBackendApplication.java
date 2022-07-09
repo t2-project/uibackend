@@ -44,6 +44,6 @@ public class UIBackendApplication {
     @Bean
     public OpenAPI customOpenAPI() {
         return new OpenAPI().components(new Components())
-            .info(new Info().title("UIBackend service API").description("API of the T2 Store's UIbackend service."));
+            .info(new Info().title("UIBackend service API").description("API of the T2-Project's UIbackend service."));
     }
 }
