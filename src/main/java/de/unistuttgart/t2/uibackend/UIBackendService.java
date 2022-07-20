@@ -197,7 +197,7 @@ public class UIBackendService {
                 }
                 Retry.decorateRunnable(retry, () -> template.put(ressourceUrl, cartContent)).run();
             } catch (RestClientException e) {
-                LOG.warn("Cannot delete {} unit(s) of {} for {}. Exception: {}", units, productId, sessionId, e);
+                LOG.error("Cannot delete {} unit(s) of {} for {}. Exception: {}", units, productId, sessionId, e);
                 throw new CartInteractionFailedException(
                     String.format("Deletion for session %s failed : %s, %d", sessionId, productId, units));
             }
@@ -269,7 +269,7 @@ public class UIBackendService {
 
             return inventoryResponse.getBody();
         } catch (RestClientException e) {
-            LOG.warn("Cannot reserve {} units of {} for {}. Exception: {}", units, productId, sessionId, e);
+            LOG.error("Cannot reserve {} units of {} for {}. Exception: {}", units, productId, sessionId, e);
             throw new ReservationFailedException(
                 String.format("Reservation for session %s failed : %s, %d", sessionId, productId, units));
         }
