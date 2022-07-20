@@ -14,7 +14,7 @@ import io.swagger.v3.oas.annotations.media.*;
 import io.swagger.v3.oas.annotations.responses.*;
 
 /**
- * Defines the http enpoints of the UIBackend.
+ * Defines the http endpoints of the UIBackend.
  *
  * @author maumau
  */
@@ -28,13 +28,9 @@ public class UIBackendController {
     }
 
     /**
-     * Get a list of all products in the inventory. The session exists such that i can get a cookie even though i am not
-     * using the ui (frontend), e.g. as the load generator does.
-     *
-     * @param session http session
-     * @return a list of all product in the inventory.
+     * @return a list of all products in the inventory
      */
-    @Operation(summary = "List all product in store", description = "List all product in store")
+    @Operation(summary = "List all available products")
     @GetMapping("/products")
     public List<Product> getAllProducts() {
         return service.getAllProducts();
@@ -53,15 +49,12 @@ public class UIBackendController {
      *                          added or deleted
      * @return list of successfully added items
      */
-    @Operation(summary = "Update items in cart", description = "List all product in store")
-    @io.swagger.v3.oas.annotations.parameters.RequestBody(content = @Content(examples = @ExampleObject(value = "{\n"
-        + "  \"content\": {\n" + "    \"prodcut-id\": 3\n" + "  }\n" + "}")))
+    @Operation(summary = "Update items in cart")
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(content = @Content(examples = @ExampleObject(value = "{\n\"content\": {\n    \"product-id\": 3\n  }\n}")))
     @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "Cart updated") })
     @PostMapping("/cart/{sessionId}")
     public List<Product> updateCart(@PathVariable String sessionId, @RequestBody UpdateCartRequest updateCartRequest) {
         List<Product> successfullyAddedProducts = new ArrayList<>();
-
-        List<Exception> exceptions = new ArrayList<>();
 
         for (Entry<String, Integer> product : updateCartRequest.getContent().entrySet()) {
             if (product.getValue() == 0) {
@@ -75,35 +68,32 @@ public class UIBackendController {
                     service.addItemToCart(sessionId, product.getKey(), product.getValue());
                     successfullyAddedProducts.add(addedProduct);
 
-                } catch (ReservationFailedException | CartInteractionFailedException e) {
-                    exceptions.add(e);
-                }
+                } catch (ReservationFailedException | CartInteractionFailedException e) {}
             } else { // product.getValue() < 0
                 try {
                     service.deleteItemFromCart(sessionId, product.getKey(), product.getValue());
-                } catch (CartInteractionFailedException e) {
-                    exceptions.add(e);
-                }
+                } catch (CartInteractionFailedException e) {}
             }
         }
         return successfullyAddedProducts;
     }
 
     /**
-     * Get a list of all products in users cart.
+     * Get a list of all products in the user's cart.
      *
-     * @param sessionId sessionId of user
-     * @return a list of all products in the users cart.
+     * @param sessionId the session id of the user
+     * @return a list of all products in the users cart
      */
-    @Operation(summary = "List all items in cart", description = "List all items in cart")
+    @Operation(summary = "List all items in cart")
     @GetMapping("/cart/{sessionId}")
     public List<Product> getCart(@PathVariable String sessionId) {
         return service.getProductsInCart(sessionId);
     }
 
     /**
-     * place an order, i.e. start a transaction. upon successfully placing the order the cart is cleared and the session
-     * gets invalidated. if the user wants to place another order he needs a new http session.
+     * Place an order, i.e. start a transaction.<br>
+     * Upon successfully placing the order, the cart is cleared and the session gets invalidated.<br>
+     * If the user wants to place another order he needs a new http session.
      *
      * @param request request to place an Order
      * @throws OrderNotPlacedException if the order could not be placed.
@@ -119,39 +109,15 @@ public class UIBackendController {
     }
 
     /**
-     * Creates the response entity if a request could not be served because placing an order failed.
+     * Creates the response entity if a request could not be served because a custom exception was thrown.
      *
-     * @param exception
+     * @param exception the exception that was thrown
      * @return a response entity with an exceptional message
      */
-    @ExceptionHandler(OrderNotPlacedException.class)
+    @ExceptionHandler({ OrderNotPlacedException.class, ReservationFailedException.class,
+        CartInteractionFailedException.class })
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    public ResponseEntity<String> handleOrderNotPlacesException(OrderNotPlacedException exception) {
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(exception.getMessage());
-    }
-
-    /**
-     * Creates the response entity if a request could not be served because of a failed reservation.
-     *
-     * @param exception
-     * @return a response entity with an exceptional message
-     */
-    @ExceptionHandler(ReservationFailedException.class)
-    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    public ResponseEntity<String> handleReservationFailedException(ReservationFailedException exception) {
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(exception.getMessage());
-    }
-
-    /**
-     * Creates the response entity if a request could not be served because the interaction with the cart service
-     * failed.
-     *
-     * @param exception
-     * @return a response entity with an exceptional message
-     */
-    @ExceptionHandler(CartInteractionFailedException.class)
-    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    public ResponseEntity<String> handleCartInteractionFailedException(CartInteractionFailedException exception) {
+    public ResponseEntity<String> handleOrderNotPlacedException(OrderNotPlacedException exception) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(exception.getMessage());
     }
 }

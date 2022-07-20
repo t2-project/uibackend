@@ -58,8 +58,8 @@ public class UIBackendRequestRetryTest {
 
     @Test
     public void testConfirmOrder_failAtOrchestrator() throws Exception {
-        SagaRequest reqest = new SagaRequest(JSONs.sessionId, "cardNumber", "cardOwner", "checksum", 42.0);
-        System.out.println(mapper.writeValueAsString(reqest));
+        SagaRequest request = new SagaRequest(JSONs.sessionId, "cardNumber", "cardOwner", "checksum", 42.0);
+        System.out.println(mapper.writeValueAsString(request));
 
         // mock cart resonse (normal)
         mockServer.expect(ExpectedCount.once(), requestTo(JSONs.cartUrl + JSONs.sessionId))
@@ -76,8 +76,8 @@ public class UIBackendRequestRetryTest {
             .andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR));
 
         // execute
-        assertThrows(OrderNotPlacedException.class, () -> service.confirmOrder(reqest.getSessionId(),
-            reqest.getCardNumber(), reqest.getCardOwner(), reqest.getChecksum()));
+        assertThrows(OrderNotPlacedException.class, () -> service.confirmOrder(request.getSessionId(),
+            request.getCardNumber(), request.getCardOwner(), request.getChecksum()));
         mockServer.verify();
     }
 
