@@ -87,7 +87,7 @@ public class UIBackendService {
             }
 
         } catch (RestClientException | JsonProcessingException e) {
-            LOG.warn("Cannot retrieve all products", e);
+            LOG.error("Cannot retrieve all products", e);
         }
         return result;
     }
@@ -127,11 +127,11 @@ public class UIBackendService {
                     p.setId(getIdfromJson(node));
                     result.add(p);
                 } catch (JsonProcessingException e) {
-                    LOG.warn("Cannot deserialize a product received from {}. Exception: {}", url, e);
+                    LOG.error("Cannot deserialize a product received from {}. Exception: {}", url, e);
                 }
             }
         } catch (JsonProcessingException e) {
-            LOG.warn("Cannot deserialize some products received from {}. Exception: {}", url, e);
+            LOG.error("Cannot deserialize some products received from {}. Exception: {}", url, e);
         }
 
         return result;
@@ -217,7 +217,7 @@ public class UIBackendService {
         try {
             template.delete(ressourceUrl);
         } catch (RestClientException e) {
-            LOG.warn("Cannot delete cart.", e);
+            LOG.error("Cannot delete cart.", e);
         }
     }
 
@@ -311,11 +311,11 @@ public class UIBackendService {
             LOG.info("deleted cart for session {}.", sessionId);
 
         } catch (RestClientException e) {
-            LOG.warn("Failed to contact orchestrator for session {}. Exception: {}", sessionId, e);
+            LOG.error("Failed to contact orchestrator for session {}. Exception: {}", sessionId, e);
             throw new OrderNotPlacedException(
                 String.format("No Order placed for session %s. Orchestrator not available. ", sessionId));
         } catch (CartInteractionFailedException e) {
-            LOG.warn("Failed to delete cart for session {}. Exception: {}", sessionId);
+            LOG.error("Failed to delete cart for session {}. Exception: {}", sessionId);
         }
     }
 
@@ -342,9 +342,9 @@ public class UIBackendService {
 
             return Optional.of(mapper.treeToValue(name, CartContent.class));
         } catch (RestClientException e) { // 404 or something like that.
-            LOG.warn("Cannot find any cart content for {}. Exception: {} ", sessionId, e);
+            LOG.error("Cannot find any cart content for {}. Exception: {} ", sessionId, e);
         } catch (JsonProcessingException e) { // whatever we received, it was no cart content.
-            LOG.warn("Cannot deserialize cart content. Exception: {}", e);
+            LOG.error("Cannot deserialize cart content. Exception: {}", e);
         }
         return Optional.empty();
     }
@@ -375,7 +375,7 @@ public class UIBackendService {
 
             return Optional.of(product);
         } catch (RestClientException | JsonProcessingException e) {
-            LOG.warn("Cannot get product {}. Exception: {}", productId, e);
+            LOG.error("Cannot get product {}. Exception: {}", productId, e);
         }
         return Optional.empty();
     }
