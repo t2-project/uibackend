@@ -12,10 +12,10 @@ import io.swagger.v3.oas.models.info.Info;
 
 /**
  * Interacts with other services to prepare data for the actual UI. (If did it right, this service is a API Gateway)
- * 
+ *
  * @author maumau
  */
-@SpringBootApplication(scanBasePackageClasses = BaseScan.class)
+@SpringBootApplication(scanBasePackageClasses = { BaseScan.class, UIBackendApplication.class })
 public class UIBackendApplication {
 
     @Value("${t2.orchestrator.url}")
