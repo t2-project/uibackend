@@ -6,7 +6,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.web.client.RestTemplate;
 
-import de.unistuttgart.t2.common.BaseScan;
 import io.swagger.v3.oas.models.*;
 import io.swagger.v3.oas.models.info.Info;
 
@@ -15,7 +14,7 @@ import io.swagger.v3.oas.models.info.Info;
  *
  * @author maumau
  */
-@SpringBootApplication(scanBasePackageClasses = { BaseScan.class, UIBackendApplication.class })
+@SpringBootApplication
 public class UIBackendApplication {
 
     @Value("${t2.orchestrator.url}")
