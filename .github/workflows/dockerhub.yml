@@ -1,6 +1,8 @@
 name: build and push docker image
-on: push
-
+on:
+  push:
+    branches:
+      - main
 jobs:
   dockerhub:
     name: Push Docker image to Docker Hub
@@ -8,13 +10,9 @@ jobs:
     steps:
     - name: set env
       run: |
-         echo "TRAM_VERSION=${{secrets.TRAM_VERSION}}" >> $GITHUB_ENV
-         echo "JAEGER_VERSION=${{secrets.JAEGER_VERSION}}" >> $GITHUB_ENV
-         echo "JACOCO_VERSION=${{secrets.JACOCO_VERSION}}" >> $GITHUB_ENV
-         echo "RESILIENCE4J_VERSION=${{secrets.RESILIENCE4J_VERSION}}" >> $GITHUB_ENV
-         echo "SPRINGDOC_VERSION=${{secrets.SPRINGDOC_VERSION}}" >> $GITHUB_ENV
-         echo "TRAM_PARTICIPANT_VERSION=${{secrets.TRAM_PARTICIPANT_VERSION}}" >> $GITHUB_ENV
-         echo "MICROMETER_VERSION=${{secrets.MICROMETER_VERSION}}" >> $GITHUB_ENV
+         curl -o setenv.sh -- 'https://raw.githubusercontent.com/t2-project/kube/main/setenv.sh'
+         vi setenv.sh -c ':%s/^export //' -c ':%s/\(.*\)#.*/\1/' -c ':%s/\s*$//g' -c ':wq' # Strip out 'export ' at the beginning, comments, and trailing whitespace
+         cat setenv.sh >> $GITHUB_ENV
     - name: Login to DockerHub
       uses: docker/login-action@v1 
       with:
@@ -36,8 +34,6 @@ jobs:
         java-version: '11'
     - name: build common
       run: cd common && ./mvnw clean install
-    - name: install common
-      run: cd common && ./mvnw install:install-file -Dfile=./target/common-1.0-SNAPSHOT.jar -DpomFile=./pom.xml
     - name: verify uibackend
       run: cd uibackend && ./mvnw clean install
     - run: |

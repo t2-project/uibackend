@@ -5,7 +5,7 @@ It wants to be an API Gateway and talks to a the Cart, Inventory and Orchestrato
 
 ## Build and Run
 
-Confer the [Documentation](https://t2-documentation.readthedocs.io/en/latest/guides/kube.html) on how to build, run or deploy the T2 Store services.
+Confer the [Documentation](https://t2-documentation.readthedocs.io/en/latest/guides/kube.html) on how to build, run or deploy the T2-Project services.
 
 ## HTTP Endpoints
 

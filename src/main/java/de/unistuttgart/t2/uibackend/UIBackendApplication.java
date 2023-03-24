@@ -6,18 +6,13 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.web.client.RestTemplate;
 
-import io.swagger.v3.oas.models.Components;
-import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.*;
 import io.swagger.v3.oas.models.info.Info;
 
 /**
- * 
- * Interacts with other services to prepare data for the actual UI.
- * 
- * (If did it right, this service is a API Gateway)
- * 
- * @author maumau
+ * Interacts with other services to prepare data for the actual UI. (If did it right, this service is a API Gateway)
  *
+ * @author maumau
  */
 @SpringBootApplication
 public class UIBackendApplication {
@@ -48,6 +43,6 @@ public class UIBackendApplication {
     @Bean
     public OpenAPI customOpenAPI() {
         return new OpenAPI().components(new Components())
-                .info(new Info().title("UIBackend service API").description("API of the T2 Store's UIbackend service."));
+            .info(new Info().title("UIBackend service API").description("API of the T2-Project's UIbackend service."));
     }
 }
