@@ -71,7 +71,7 @@ public class UIBackendController {
                 } catch (ReservationFailedException | CartInteractionFailedException e) {}
             } else { // product.getValue() < 0
                 try {
-                    service.deleteItemFromCart(sessionId, product.getKey(), product.getValue());
+                    service.deleteItemFromCart(sessionId, product.getKey(), Math.abs(product.getValue()));
                 } catch (CartInteractionFailedException e) {}
             }
         }

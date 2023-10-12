@@ -144,12 +144,16 @@ public class UIBackendService {
      *
      * @param sessionId identifies the cart to add to
      * @param productId id of product to be added
-     * @param units     number of units to be added
+     * @param units     number of units to be added (must not be negative)
      * @throws CartInteractionFailedException if the request number of unit could not be placed in the cart.
      */
     public void addItemToCart(String sessionId, String productId, int units) throws CartInteractionFailedException {
         String ressourceUrl = cartUrl + sessionId;
         LOG.debug("put to " + ressourceUrl);
+
+        if (units < 0) {
+            throw new IllegalArgumentException("Value of units must not be negative.");
+        }
 
         Optional<CartContent> optCartContent = getCartContent(sessionId);
 
@@ -176,7 +180,7 @@ public class UIBackendService {
      *
      * @param sessionId identifies the cart to delete from
      * @param productId id of the product to be deleted
-     * @param units     number of units to be deleted
+     * @param units     number of units to be deleted (must not be negative)
      * @throws CartInteractionFailedException if anything went wrong while talking to the cart
      */
     public void deleteItemFromCart(String sessionId, String productId, int units)
@@ -184,12 +188,16 @@ public class UIBackendService {
         String ressourceUrl = cartUrl + sessionId;
         LOG.debug("put to " + ressourceUrl);
 
+        if (units < 0) {
+            throw new IllegalArgumentException("Value of units must not be negative.");
+        }
+
         Optional<CartContent> optCartContent = getCartContent(sessionId);
 
         if (optCartContent.isPresent()) {
             try {
                 CartContent cartContent = optCartContent.get();
-                int remainingUnitsInCart = cartContent.getUnits(productId) + units;
+                int remainingUnitsInCart = cartContent.getUnits(productId) - units;
                 if (remainingUnitsInCart > 0) {
                     cartContent.getContent().put(productId, remainingUnitsInCart);
                 } else {
