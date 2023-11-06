@@ -30,7 +30,7 @@ import de.unistuttgart.t2.uibackend.supplicants.JSONs;
  */
 @ExtendWith(SpringExtension.class)
 @ExtendWith(MockitoExtension.class)
-public class UIBackenResponseTest {
+public class UIBackendResponseTest {
 
     @Mock // mock the rest template
     private RestTemplate template;
