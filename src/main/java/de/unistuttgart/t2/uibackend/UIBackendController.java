@@ -117,7 +117,7 @@ public class UIBackendController {
     @ExceptionHandler({ OrderNotPlacedException.class, ReservationFailedException.class,
         CartInteractionFailedException.class })
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    public ResponseEntity<String> handleOrderNotPlacedException(OrderNotPlacedException exception) {
+    public ResponseEntity<String> handleCustomException(Exception exception) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(exception.getMessage());
     }
 }
