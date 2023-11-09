@@ -3,9 +3,8 @@ package de.unistuttgart.t2.uibackend;
 import static de.unistuttgart.t2.uibackend.supplicants.JSONs.inventoryUrl;
 import static de.unistuttgart.t2.uibackend.supplicants.JSONs.inventoryresponseAllProducts;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
-import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
-import static org.springframework.test.web.client.match.MockRestRequestMatchers.jsonPath;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 
@@ -83,24 +82,28 @@ public class UIBackendControllerTest {
     public void testAddToCart() throws ReservationFailedException, CartInteractionFailedException {
 
         mockServer.expect(ExpectedCount.once(), requestTo(reservationUrl)).andExpect(method(HttpMethod.POST))
-            .andRespond(withSuccess(cartResponse(), MediaType.APPLICATION_JSON));
+            .andRespond(withSuccess(inventoryResponse(), MediaType.APPLICATION_JSON));
 
         mockServer.expect(ExpectedCount.twice(), requestTo(cartUrl + sessionId)).andExpect(method(HttpMethod.GET))
             .andRespond(withStatus(HttpStatus.NOT_FOUND));
 
+        int unitsToAdd = 3;
         mockServer.expect(ExpectedCount.once(), requestTo(cartUrl + sessionId)).andExpect(method(HttpMethod.PUT))
-            .andExpect(jsonPath("$.content." + productId).value(units))
+            .andExpect(jsonPath("$.content." + productId).value(unitsToAdd))
             .andRespond(withSuccess(cartResponse(), MediaType.APPLICATION_JSON));
 
-        UpdateCartRequest request = new UpdateCartRequest(Map.of(productId, units));
-        controller.updateCart(sessionId, request);
+        UpdateCartRequest request = new UpdateCartRequest(Map.of(productId, unitsToAdd));
+        List<Product> addedProducts = controller.updateCart(sessionId, request);
+
+        assertEquals(1, addedProducts.size());
+        assertEquals(unitsToAdd, addedProducts.get(0).getUnits());
     }
 
     @Test
     public void testIncreaseCart() throws ReservationFailedException, CartInteractionFailedException {
 
         mockServer.expect(ExpectedCount.once(), requestTo(reservationUrl)).andExpect(method(HttpMethod.POST))
-            .andRespond(withSuccess(cartResponse(), MediaType.APPLICATION_JSON));
+            .andRespond(withSuccess(inventoryResponse(), MediaType.APPLICATION_JSON));
 
         mockServer.expect(ExpectedCount.once(), requestTo(cartUrl + sessionId)).andExpect(method(HttpMethod.GET))
             .andRespond(withSuccess(cartResponse(), MediaType.APPLICATION_JSON));
@@ -110,7 +113,10 @@ public class UIBackendControllerTest {
             .andRespond(withSuccess(cartResponse(), MediaType.APPLICATION_JSON));
 
         UpdateCartRequest request = new UpdateCartRequest(Map.of(productId, units));
-        controller.updateCart(sessionId, request);
+        List<Product> addedProducts = controller.updateCart(sessionId, request);
+
+        assertEquals(1, addedProducts.size());
+        assertEquals(units, addedProducts.get(0).getUnits());
     }
 
     @Test
@@ -124,8 +130,9 @@ public class UIBackendControllerTest {
             .andRespond(withSuccess(cartResponse(), MediaType.APPLICATION_JSON));
 
         UpdateCartRequest request = new UpdateCartRequest(Map.of(productId, -1));
-        controller.updateCart(sessionId, request);
+        List<Product> addedProducts = controller.updateCart(sessionId, request);
 
+        assertEquals(0, addedProducts.size());
     }
 
     @Test
@@ -139,6 +146,8 @@ public class UIBackendControllerTest {
             .andRespond(withSuccess(cartResponse(), MediaType.APPLICATION_JSON));
 
         UpdateCartRequest request = new UpdateCartRequest(Map.of(productId, -units));
-        controller.updateCart(sessionId, request);
+        List<Product> addedProducts = controller.updateCart(sessionId, request);
+
+        assertEquals(0, addedProducts.size());
     }
 }

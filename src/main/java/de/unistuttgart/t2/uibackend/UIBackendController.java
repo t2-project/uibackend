@@ -57,6 +57,7 @@ public class UIBackendController {
         List<Product> successfullyAddedProducts = new ArrayList<>();
 
         for (Entry<String, Integer> product : updateCartRequest.getContent().entrySet()) {
+            String productId = product.getKey();
             if (product.getValue() == 0) {
                 continue;
             }
@@ -64,14 +65,17 @@ public class UIBackendController {
                 try {
                     // contact inventory first, cause i'd rather have a dangling reservation than a
                     // products in the cart that are not backed with reservations.
-                    Product addedProduct = service.makeReservations(sessionId, product.getKey(), product.getValue());
-                    service.addItemToCart(sessionId, product.getKey(), product.getValue());
+                    int unitsToAdd = product.getValue();
+                    Product addedProduct = service.makeReservations(sessionId, productId, unitsToAdd);
+                    addedProduct.setUnits(unitsToAdd);
+                    service.addItemToCart(sessionId, productId, unitsToAdd);
                     successfullyAddedProducts.add(addedProduct);
 
                 } catch (ReservationFailedException | CartInteractionFailedException e) {}
             } else { // product.getValue() < 0
                 try {
-                    service.deleteItemFromCart(sessionId, product.getKey(), Math.abs(product.getValue()));
+                    int unitsToDelete = Math.abs(product.getValue());
+                    service.deleteItemFromCart(sessionId, productId, unitsToDelete);
                 } catch (CartInteractionFailedException e) {}
             }
         }
