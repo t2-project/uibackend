@@ -41,7 +41,7 @@ public class UIBackendService {
     private final ObjectMapper mapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES,
         false);
 
-    // they have all the trailing '/' and stuff.
+    // URLs don't have a trailing slash
     private final String orchestratorUrl;
     private final String cartUrl;
     private final String inventoryUrl;
@@ -160,7 +160,7 @@ public class UIBackendService {
      * @throws CartInteractionFailedException if the request number of unit could not be placed in the cart.
      */
     public void addItemToCart(String sessionId, String productId, int units) throws CartInteractionFailedException {
-        String resourceUrl = cartUrl + sessionId;
+        String resourceUrl = cartUrl + "/" + sessionId;
         LOG.debug("put to " + resourceUrl);
 
         if (units < 0) {
@@ -197,7 +197,7 @@ public class UIBackendService {
      */
     public void deleteItemFromCart(String sessionId, String productId, int units)
         throws CartInteractionFailedException {
-        String resourceUrl = cartUrl + sessionId;
+        String resourceUrl = cartUrl + "/" + sessionId;
         LOG.debug("put to " + resourceUrl);
 
         if (units < 0) {
@@ -231,7 +231,7 @@ public class UIBackendService {
      * @throws CartInteractionFailedException if anything went wrong while talking to the cart
      */
     public void deleteCart(String sessionId) throws CartInteractionFailedException {
-        String resourceUrl = cartUrl + sessionId;
+        String resourceUrl = cartUrl + "/" + sessionId;
         LOG.debug("delete to " + resourceUrl);
 
         try {
@@ -278,7 +278,7 @@ public class UIBackendService {
     public Product makeReservations(String sessionId, String productId, int units)
         throws ReservationFailedException {
 
-        String resourceUrl = inventoryUrl + reservationEndpoint;
+        String resourceUrl = inventoryUrl + "/" + reservationEndpoint;
         LOG.debug("post to " + resourceUrl);
 
         try {
@@ -349,7 +349,7 @@ public class UIBackendService {
      * @return content of cart iff it exists
      */
     protected Optional<CartContent> getCartContent(String sessionId) {
-        String resourceUrl = cartUrl + sessionId;
+        String resourceUrl = cartUrl + "/" + sessionId;
         LOG.debug("get from " + resourceUrl);
 
         try {
@@ -379,7 +379,7 @@ public class UIBackendService {
      * @return product with given id iff it exists
      */
     protected Optional<Product> getSingleProduct(String productId) {
-        String resourceUrl = inventoryUrl + productId;
+        String resourceUrl = inventoryUrl + "/" + productId;
         LOG.debug("get from " + resourceUrl);
 
         try {

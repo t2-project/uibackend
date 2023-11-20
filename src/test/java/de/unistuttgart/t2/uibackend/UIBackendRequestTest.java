@@ -62,12 +62,12 @@ public class UIBackendRequestTest {
         System.out.println(mapper.writeValueAsString(request));
 
         // mock cart response
-        mockServer.expect(ExpectedCount.once(), requestTo(JSONs.cartUrl + JSONs.sessionId))
+        mockServer.expect(ExpectedCount.once(), requestTo(JSONs.cartUrl + "/" + JSONs.sessionId))
             .andExpect(method(HttpMethod.GET))
             .andRespond(withSuccess(JSONs.cartResponse(), MediaType.APPLICATION_JSON));
 
         // mock inventory response
-        mockServer.expect(ExpectedCount.once(), requestTo(JSONs.inventoryUrl + JSONs.productId))
+        mockServer.expect(ExpectedCount.once(), requestTo(JSONs.inventoryUrl + "/" + JSONs.productId))
             .andExpect(method(HttpMethod.GET))
             .andRespond(withSuccess(inventoryResponse(), MediaType.APPLICATION_JSON));
 
@@ -82,7 +82,7 @@ public class UIBackendRequestTest {
             .andExpect(content().json(mapper.writeValueAsString(request))).andRespond(withStatus(HttpStatus.OK));
 
         // mock delete cart
-        mockServer.expect(ExpectedCount.once(), requestTo(JSONs.cartUrl + JSONs.sessionId))
+        mockServer.expect(ExpectedCount.once(), requestTo(JSONs.cartUrl + "/" + JSONs.sessionId))
             .andExpect(method(HttpMethod.DELETE))
             .andRespond(withSuccess());
 
@@ -95,7 +95,7 @@ public class UIBackendRequestTest {
     @Test
     public void testGetSingleProduct() throws Exception {
 
-        mockServer.expect(ExpectedCount.once(), requestTo(JSONs.inventoryUrl + JSONs.productId))
+        mockServer.expect(ExpectedCount.once(), requestTo(JSONs.inventoryUrl + "/" + JSONs.productId))
             .andExpect(method(HttpMethod.GET))
             .andRespond(withSuccess(inventoryResponse(), MediaType.APPLICATION_JSON));
 
@@ -107,7 +107,7 @@ public class UIBackendRequestTest {
     @Test
     public void testGetCart() {
 
-        mockServer.expect(ExpectedCount.once(), requestTo(JSONs.cartUrl + JSONs.sessionId))
+        mockServer.expect(ExpectedCount.once(), requestTo(JSONs.cartUrl + "/" + JSONs.sessionId))
             .andExpect(method(HttpMethod.GET))
             .andRespond(withSuccess(cartResponse(), MediaType.APPLICATION_JSON));
 
@@ -144,10 +144,10 @@ public class UIBackendRequestTest {
 
     @Test
     public void testAddItemToCart() throws Exception {
-        mockServer.expect(ExpectedCount.once(), requestTo(cartUrl + sessionId)).andExpect(method(HttpMethod.GET))
+        mockServer.expect(ExpectedCount.once(), requestTo(cartUrl + "/" + sessionId)).andExpect(method(HttpMethod.GET))
             .andRespond(withSuccess(cartResponse(), MediaType.APPLICATION_JSON));
 
-        mockServer.expect(ExpectedCount.once(), requestTo(cartUrl + sessionId)).andExpect(method(HttpMethod.PUT))
+        mockServer.expect(ExpectedCount.once(), requestTo(cartUrl + "/" + sessionId)).andExpect(method(HttpMethod.PUT))
             .andExpect(content().contentType(MediaType.APPLICATION_JSON))
             .andExpect(content().json(updatedCartResponse())).andRespond(withStatus(HttpStatus.OK));
 
@@ -159,10 +159,10 @@ public class UIBackendRequestTest {
 
     @Test
     public void testDeleteItemFromCart() throws Exception {
-        mockServer.expect(ExpectedCount.once(), requestTo(cartUrl + sessionId)).andExpect(method(HttpMethod.GET))
+        mockServer.expect(ExpectedCount.once(), requestTo(cartUrl + "/" + sessionId)).andExpect(method(HttpMethod.GET))
             .andRespond(withSuccess(cartResponse(), MediaType.APPLICATION_JSON));
 
-        mockServer.expect(ExpectedCount.once(), requestTo(cartUrl + sessionId)).andExpect(method(HttpMethod.PUT))
+        mockServer.expect(ExpectedCount.once(), requestTo(cartUrl + "/" + sessionId)).andExpect(method(HttpMethod.PUT))
             .andRespond(withStatus(HttpStatus.OK));
 
         // execute
@@ -172,13 +172,13 @@ public class UIBackendRequestTest {
 
     @Test
     public void testGetProductsInCart() {
-        mockServer.expect(ExpectedCount.once(), requestTo(cartUrl + sessionId)).andExpect(method(HttpMethod.GET))
+        mockServer.expect(ExpectedCount.once(), requestTo(cartUrl + "/" + sessionId)).andExpect(method(HttpMethod.GET))
             .andRespond(withSuccess(cartResponseMulti(), MediaType.APPLICATION_JSON));
 
-        mockServer.expect(ExpectedCount.once(), requestTo(inventoryUrl + productId)).andExpect(method(HttpMethod.GET))
+        mockServer.expect(ExpectedCount.once(), requestTo(inventoryUrl + "/" + productId)).andExpect(method(HttpMethod.GET))
             .andRespond(withSuccess(inventoryResponse(), MediaType.APPLICATION_JSON));
 
-        mockServer.expect(ExpectedCount.once(), requestTo(inventoryUrl + anotherproductId))
+        mockServer.expect(ExpectedCount.once(), requestTo(inventoryUrl + "/" + anotherproductId))
             .andExpect(method(HttpMethod.GET))
             .andRespond(withSuccess(anotherInventoryResponse(), MediaType.APPLICATION_JSON));
 

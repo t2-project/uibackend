@@ -48,7 +48,7 @@ public class UIBackendResponseTest {
     public void getCartContentTest() {
         ResponseEntity<String> entity = new ResponseEntity<>(JSONs.cartResponse(), new HttpHeaders(), HttpStatus.OK);
 
-        Mockito.when(template.getForEntity(JSONs.cartUrl + JSONs.sessionId, String.class)).thenReturn(entity);
+        Mockito.when(template.getForEntity(JSONs.cartUrl + "/" + JSONs.sessionId, String.class)).thenReturn(entity);
 
         CartContent products = service.getCartContent(JSONs.sessionId).get();
 
@@ -64,11 +64,11 @@ public class UIBackendResponseTest {
         // setup cart responses
         ResponseEntity<String> cartEntity =
             new ResponseEntity<>(JSONs.cartResponse(), new HttpHeaders(), HttpStatus.OK);
-        Mockito.when(template.getForEntity(JSONs.cartUrl + JSONs.sessionId, String.class)).thenReturn(cartEntity);
+        Mockito.when(template.getForEntity(JSONs.cartUrl + "/" + JSONs.sessionId, String.class)).thenReturn(cartEntity);
 
         // setup inventory response
         ResponseEntity<String> inventoryEntity = new ResponseEntity<>(JSONs.inventoryResponse(), HttpStatus.OK);
-        Mockito.when(template.getForEntity(JSONs.inventoryUrl + JSONs.productId, String.class))
+        Mockito.when(template.getForEntity(JSONs.inventoryUrl + "/" + JSONs.productId, String.class))
             .thenReturn(inventoryEntity);
 
         // execute
@@ -87,7 +87,7 @@ public class UIBackendResponseTest {
     public void getSingleProductTest() {
         // setup inventory responses
         ResponseEntity<String> entity = new ResponseEntity<>(inventoryResponse(), HttpStatus.OK);
-        Mockito.when(template.getForEntity(JSONs.inventoryUrl + JSONs.productId, String.class)).thenReturn(entity);
+        Mockito.when(template.getForEntity(JSONs.inventoryUrl + "/" + JSONs.productId, String.class)).thenReturn(entity);
 
         // execute
         Product product = service.getSingleProduct(JSONs.productId).get();
