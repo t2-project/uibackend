@@ -1,4 +1,7 @@
-# put the trailing '/' there
+info:
+  app:
+    version: '@project.version@'
+
 t2:
   orchestrator:
     url: ${T2_ORCHESTRATOR_URL}
@@ -22,16 +25,18 @@ management:
       percentiles:
         all: 0.5, 0.75, 0.95, 0.98, 0.99, 0.999, 1.0
   health:
-    probes:
-      enabled: true
     livenessState:
       enabled: true
     readinessState:
       enabled: true
+  endpoint:
+    health:
+      probes:
+        enabled: true
 
 opentracing:
   jaeger:
     service-name: uibackend
-    enabled: TRUE
+    enabled: ${T2_JAEGER_ENABLED}
     udp-sender:
-      host: ${JAEGER_HOST}
+      host: ${T2_JAEGER_HOST}

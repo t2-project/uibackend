@@ -1,5 +1,7 @@
 package de.unistuttgart.t2.uibackend.exceptions;
 
+import java.io.Serial;
+
 /**
  * Indicates that the placement of an order failed.
  *
@@ -7,6 +9,7 @@ package de.unistuttgart.t2.uibackend.exceptions;
  */
 public final class OrderNotPlacedException extends Exception {
 
+    @Serial
     private static final long serialVersionUID = 1L;
 
     public OrderNotPlacedException(String message) {

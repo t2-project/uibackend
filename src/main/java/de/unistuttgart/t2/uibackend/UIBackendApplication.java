@@ -1,13 +1,13 @@
 package de.unistuttgart.t2.uibackend;
 
+import io.swagger.v3.oas.models.Components;
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Info;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.web.client.RestTemplate;
-
-import io.swagger.v3.oas.models.*;
-import io.swagger.v3.oas.models.info.Info;
 
 /**
  * Interacts with other services to prepare data for the actual UI. (If did it right, this service is a API Gateway)
@@ -36,13 +36,15 @@ public class UIBackendApplication {
     }
 
     @Bean
-    public UIBackendService backendService() {
+    public UIBackendService service() {
         return new UIBackendService(cartUrl, inventoryUrl, orchestratorUrl, reservationEndpoint);
     }
 
     @Bean
-    public OpenAPI customOpenAPI() {
-        return new OpenAPI().components(new Components())
-            .info(new Info().title("UIBackend service API").description("API of the T2-Project's UIbackend service."));
+    public OpenAPI customOpenAPI(@Value("${info.app.version:unknown}") String version) {
+        return new OpenAPI().components(new Components()).info(new Info()
+            .title("T2 UIBackend service API")
+            .description("API of the T2-Project's UIBackend service.")
+            .version(version));
     }
 }

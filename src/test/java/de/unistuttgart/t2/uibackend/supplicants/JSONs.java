@@ -88,7 +88,7 @@ public class JSONs {
         return base.toString();
     }
 
-    public static String inventoryresponseAllProducts() {
+    public static String inventoryResponseAllProducts() {
         JsonNode links1 = makeLinks(inventoryUrl + productId, "inventory");
         JsonNode links2 = makeLinks(inventoryUrl + anotherproductId, "inventory");
         ObjectNode base1 = inventoryBase("name", "description");
@@ -97,8 +97,8 @@ public class JSONs {
         base1.set("_links", links1);
         base2.set("_links", links2);
 
-        JsonNode inventroy = factory.arrayNode().add(base1).add(base2);
-        ObjectNode all = factory.objectNode().set("inventory", inventroy);
+        JsonNode inventory = factory.arrayNode().add(base1).add(base2);
+        ObjectNode all = factory.objectNode().set("inventory", inventory);
         ObjectNode embedded = factory.objectNode().set("_embedded", all);
 
         return embedded.toString();

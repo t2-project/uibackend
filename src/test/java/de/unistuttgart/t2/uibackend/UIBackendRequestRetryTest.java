@@ -1,5 +1,12 @@
 package de.unistuttgart.t2.uibackend;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import de.unistuttgart.t2.common.SagaRequest;
+import de.unistuttgart.t2.uibackend.exceptions.CartInteractionFailedException;
+import de.unistuttgart.t2.uibackend.exceptions.OrderNotPlacedException;
+import de.unistuttgart.t2.uibackend.exceptions.ReservationFailedException;
+import de.unistuttgart.t2.uibackend.supplicants.JSONs;
+import de.unistuttgart.t2.uibackend.supplicants.TestContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -14,25 +21,18 @@ import org.springframework.test.web.client.ExpectedCount;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestTemplate;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import de.unistuttgart.t2.common.SagaRequest;
-import de.unistuttgart.t2.uibackend.exceptions.CartInteractionFailedException;
-import de.unistuttgart.t2.uibackend.exceptions.OrderNotPlacedException;
-import de.unistuttgart.t2.uibackend.exceptions.ReservationFailedException;
-import de.unistuttgart.t2.uibackend.supplicants.JSONs;
-import de.unistuttgart.t2.uibackend.supplicants.TestContext;
-
 import static de.unistuttgart.t2.uibackend.supplicants.JSONs.*;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
-import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 /**
- * Test whether UIBackendservice retries requests as it should. The set up is similar to {@link UIBackendRequestTest}
+ * Test whether UIBackendService retries requests as it should. The setup is similar to {@link UIBackendRequestTest}
  * except that the mock server does now always reply with a {@link HttpStatus#INTERNAL_SERVER_ERROR} at some point and
- * that the the test always assert that the request that received the Error is placed twice.
+ * that the test always assert that the request that received the Error is placed twice.
  * 
  * @author maumau
  */
@@ -41,7 +41,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 @ActiveProfiles("test")
 public class UIBackendRequestRetryTest {
 
-    private ObjectMapper mapper = new ObjectMapper();
+    private final ObjectMapper mapper = new ObjectMapper();
 
     @Autowired
     UIBackendService service;
@@ -61,7 +61,7 @@ public class UIBackendRequestRetryTest {
         SagaRequest request = new SagaRequest(JSONs.sessionId, "cardNumber", "cardOwner", "checksum", 42.0);
         System.out.println(mapper.writeValueAsString(request));
 
-        // mock cart resonse (normal)
+        // mock cart response (normal)
         mockServer.expect(ExpectedCount.once(), requestTo(JSONs.cartUrl + JSONs.sessionId))
             .andExpect(method(HttpMethod.GET))
             .andRespond(withSuccess(JSONs.cartResponse(), MediaType.APPLICATION_JSON));
@@ -82,7 +82,7 @@ public class UIBackendRequestRetryTest {
     }
 
     @Test
-    public void testGetSingleProduct_failAtInventory() throws Exception {
+    public void testGetSingleProduct_failAtInventory() {
 
         mockServer.expect(ExpectedCount.twice(), requestTo(JSONs.inventoryUrl + JSONs.productId))
             .andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR));
@@ -94,7 +94,7 @@ public class UIBackendRequestRetryTest {
 
     // Cart fails & should be requested twice.
     @Test
-    public void testGetCart_failAtCart() throws Exception {
+    public void testGetCart_failAtCart() {
 
         mockServer.expect(ExpectedCount.twice(), requestTo(JSONs.cartUrl + JSONs.sessionId))
             .andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR));
@@ -105,7 +105,7 @@ public class UIBackendRequestRetryTest {
     }
 
     @Test
-    public void testMakeReservation_failAtInventory() throws Exception {
+    public void testMakeReservation_failAtInventory() {
 
         mockServer.expect(ExpectedCount.twice(), requestTo(reservationUrl)).andExpect(method(HttpMethod.POST))
             .andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR));
@@ -119,7 +119,7 @@ public class UIBackendRequestRetryTest {
     }
 
     @Test
-    public void testGetAllProducts_failAtInventory() throws Exception {
+    public void testGetAllProducts_failAtInventory() {
 
         mockServer.expect(ExpectedCount.twice(), requestTo(inventoryUrl))
             .andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR));
@@ -130,7 +130,7 @@ public class UIBackendRequestRetryTest {
     }
 
     @Test
-    public void testAddItemToCart_failAtCart() throws Exception {
+    public void testAddItemToCart_failAtCart() {
         mockServer.expect(ExpectedCount.once(), requestTo(cartUrl + sessionId)).andExpect(method(HttpMethod.GET))
             .andRespond(withSuccess(cartResponse(), MediaType.APPLICATION_JSON));
 
@@ -144,7 +144,7 @@ public class UIBackendRequestRetryTest {
     }
 
     @Test
-    public void testDeleteItemFromCart_failAtCart() throws Exception {
+    public void testDeleteItemFromCart_failAtCart() {
         mockServer.expect(ExpectedCount.once(), requestTo(cartUrl + sessionId)).andExpect(method(HttpMethod.GET))
             .andRespond(withSuccess(cartResponse(), MediaType.APPLICATION_JSON));
 
@@ -157,7 +157,7 @@ public class UIBackendRequestRetryTest {
     }
 
     @Test
-    public void testGetProductsInCart_failAtCart() throws Exception {
+    public void testGetProductsInCart_failAtCart() {
         mockServer.expect(ExpectedCount.twice(), requestTo(cartUrl + sessionId)).andExpect(method(HttpMethod.GET))
             .andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR));
 
@@ -166,7 +166,7 @@ public class UIBackendRequestRetryTest {
     }
 
     @Test
-    public void testGetProductsInCart_failAtInventory() throws Exception {
+    public void testGetProductsInCart_failAtInventory() {
         mockServer.expect(ExpectedCount.once(), requestTo(cartUrl + sessionId)).andExpect(method(HttpMethod.GET))
             .andRespond(withSuccess(cartResponseMulti(), MediaType.APPLICATION_JSON));
 

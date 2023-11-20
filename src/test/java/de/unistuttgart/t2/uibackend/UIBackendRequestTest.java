@@ -1,5 +1,10 @@
 package de.unistuttgart.t2.uibackend;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import de.unistuttgart.t2.common.ReservationRequest;
+import de.unistuttgart.t2.common.SagaRequest;
+import de.unistuttgart.t2.uibackend.supplicants.JSONs;
+import de.unistuttgart.t2.uibackend.supplicants.TestContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -14,21 +19,15 @@ import org.springframework.test.web.client.ExpectedCount;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestTemplate;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import de.unistuttgart.t2.common.ReservationRequest;
-import de.unistuttgart.t2.common.SagaRequest;
-import de.unistuttgart.t2.uibackend.supplicants.JSONs;
-import de.unistuttgart.t2.uibackend.supplicants.TestContext;
-
 import static de.unistuttgart.t2.uibackend.supplicants.JSONs.*;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
-import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 /**
- * Test whether UIBackendservice makes the right requests.
+ * Test whether UIBackendService makes the right requests.
  * <p>
- * The Set up is like this:
+ * The Setup is like this:
  * <ul>
  * <li>Call the operation under test.
  * <li>Uses the mock server to receive the request and verify that it is placed as intended.
@@ -41,7 +40,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 @ActiveProfiles("test")
 public class UIBackendRequestTest {
 
-    private ObjectMapper mapper = new ObjectMapper();
+    private final ObjectMapper mapper = new ObjectMapper();
 
     @Autowired
     UIBackendService service;
@@ -106,7 +105,7 @@ public class UIBackendRequestTest {
     }
 
     @Test
-    public void testGetCart() throws Exception {
+    public void testGetCart() {
 
         mockServer.expect(ExpectedCount.once(), requestTo(JSONs.cartUrl + JSONs.sessionId))
             .andExpect(method(HttpMethod.GET))
@@ -132,11 +131,11 @@ public class UIBackendRequestTest {
     }
 
     @Test
-    public void testGetAllProducts() throws Exception {
+    public void testGetAllProducts() {
 
         // twice = once for products and once for page
         mockServer.expect(ExpectedCount.twice(), requestTo(inventoryUrl)).andExpect(method(HttpMethod.GET))
-            .andRespond(withSuccess(inventoryresponseAllProducts(), MediaType.APPLICATION_JSON));
+            .andRespond(withSuccess(inventoryResponseAllProducts(), MediaType.APPLICATION_JSON));
 
         // execute
         service.getAllProducts();
@@ -172,7 +171,7 @@ public class UIBackendRequestTest {
     }
 
     @Test
-    public void testGetProductsInCart() throws Exception {
+    public void testGetProductsInCart() {
         mockServer.expect(ExpectedCount.once(), requestTo(cartUrl + sessionId)).andExpect(method(HttpMethod.GET))
             .andRespond(withSuccess(cartResponseMulti(), MediaType.APPLICATION_JSON));
 

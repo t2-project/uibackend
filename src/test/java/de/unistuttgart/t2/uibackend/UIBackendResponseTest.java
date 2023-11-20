@@ -1,25 +1,29 @@
 package de.unistuttgart.t2.uibackend;
 
-import static de.unistuttgart.t2.uibackend.supplicants.JSONs.*;
-import static org.junit.jupiter.api.Assertions.*;
-
-import java.util.List;
-
+import de.unistuttgart.t2.common.CartContent;
+import de.unistuttgart.t2.common.Product;
+import de.unistuttgart.t2.uibackend.supplicants.JSONs;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.*;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.*;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.web.client.RestTemplate;
 
-import de.unistuttgart.t2.common.*;
-import de.unistuttgart.t2.uibackend.supplicants.JSONs;
+import java.util.List;
+
+import static de.unistuttgart.t2.uibackend.supplicants.JSONs.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Test whether UIBackendservice handles all responses correctly.
+ * Test whether UIBackendService handles all responses correctly.
  * <p>
- * The Set up is like this:
+ * The Setup is like this:
  * <ul>
  * <li>Call the operation under test.
  * <li>Mock the responses that the operation would receive from other services.
@@ -100,7 +104,7 @@ public class UIBackendResponseTest {
     @Test
     public void getAllProductsTest() {
         // setup inventory responses
-        ResponseEntity<String> entity = new ResponseEntity<>(inventoryresponseAllProducts(), HttpStatus.OK);
+        ResponseEntity<String> entity = new ResponseEntity<>(inventoryResponseAllProducts(), HttpStatus.OK);
         Mockito.when(template.getForEntity(JSONs.inventoryUrl, String.class)) // no id, we want ALL.
             .thenReturn(entity);
 
