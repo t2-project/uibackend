@@ -16,11 +16,11 @@ public class JSONs {
     public static String anotherproductId = "foo2";
     public static int anotherunits = 42;
     public static String sessionId = "bar";
-    public static String orchestratorUrl = "http://localhost:8083/order/";
-    public static String cartUrl = "http://localhost:8080/cart/";
-    public static String inventoryUrl = "http://localhost:8082/inventory/";
-    public static String reservationEndpoint = "reservation/";
-    public static String reservationUrl = inventoryUrl + reservationEndpoint;
+    public static String orchestratorUrl = "http://localhost:8083/order";
+    public static String cartUrl = "http://localhost:8080/cart";
+    public static String inventoryUrl = "http://localhost:8082/inventory";
+    public static String reservationEndpoint = "reservation";
+    public static String reservationUrl = inventoryUrl + "/" + reservationEndpoint;
 
     static JsonNodeFactory factory = JsonNodeFactory.instance;
 
@@ -45,7 +45,7 @@ public class JSONs {
 
     public static String cartResponse() {
         JsonNode content = makeCartContent(productId, units);
-        JsonNode links = makeLinks(cartUrl + sessionId, "cart");
+        JsonNode links = makeLinks(cartUrl + "/" + sessionId, "cart");
         JsonNode response = ((ObjectNode) factory.objectNode().set("content", content)).set("_links", links);
 
         return response.toString();
@@ -54,7 +54,7 @@ public class JSONs {
     public static String cartResponseMulti() {
         JsonNode content = makeCartContent(productId, units);
         content = ((ObjectNode) content).set(anotherproductId, factory.numberNode(anotherunits));
-        JsonNode links = makeLinks(cartUrl + sessionId, "cart");
+        JsonNode links = makeLinks(cartUrl + "/" + sessionId, "cart");
         JsonNode response = ((ObjectNode) factory.objectNode().set("content", content)).set("_links", links);
 
         return response.toString();
@@ -62,7 +62,7 @@ public class JSONs {
 
     public static String inventoryResponse() {
         ObjectNode base = inventoryBase("name", "description");
-        JsonNode links = makeLinks(inventoryUrl + productId, "inventory");
+        JsonNode links = makeLinks(inventoryUrl + "/" + productId, "inventory");
 
         base.set("_links", links);
 
@@ -81,24 +81,24 @@ public class JSONs {
 
     public static String anotherInventoryResponse() {
         ObjectNode base = inventoryBase("name2", "description2");
-        JsonNode links = makeLinks(inventoryUrl + anotherproductId, "inventory");
+        JsonNode links = makeLinks(inventoryUrl + "/" + anotherproductId, "inventory");
 
         base.set("_links", links);
 
         return base.toString();
     }
 
-    public static String inventoryresponseAllProducts() {
-        JsonNode links1 = makeLinks(inventoryUrl + productId, "inventory");
-        JsonNode links2 = makeLinks(inventoryUrl + anotherproductId, "inventory");
+    public static String inventoryResponseAllProducts() {
+        JsonNode links1 = makeLinks(inventoryUrl + "/" + productId, "inventory");
+        JsonNode links2 = makeLinks(inventoryUrl + "/" + anotherproductId, "inventory");
         ObjectNode base1 = inventoryBase("name", "description");
         ObjectNode base2 = inventoryBase("name2", "description2");
 
         base1.set("_links", links1);
         base2.set("_links", links2);
 
-        JsonNode inventroy = factory.arrayNode().add(base1).add(base2);
-        ObjectNode all = factory.objectNode().set("inventory", inventroy);
+        JsonNode inventory = factory.arrayNode().add(base1).add(base2);
+        ObjectNode all = factory.objectNode().set("inventory", inventory);
         ObjectNode embedded = factory.objectNode().set("_embedded", all);
 
         return embedded.toString();

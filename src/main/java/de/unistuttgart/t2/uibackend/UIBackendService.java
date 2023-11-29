@@ -1,18 +1,30 @@
 package de.unistuttgart.t2.uibackend;
 
-import java.util.*;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.*;
-
-import org.slf4j.*;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import de.unistuttgart.t2.common.CartContent;
+import de.unistuttgart.t2.common.Product;
+import de.unistuttgart.t2.common.ReservationRequest;
+import de.unistuttgart.t2.common.SagaRequest;
+import de.unistuttgart.t2.uibackend.exceptions.CartInteractionFailedException;
+import de.unistuttgart.t2.uibackend.exceptions.OrderNotPlacedException;
+import de.unistuttgart.t2.uibackend.exceptions.ReservationFailedException;
+import io.github.resilience4j.retry.Retry;
+import io.github.resilience4j.retry.RetryConfig;
+import io.github.resilience4j.retry.RetryRegistry;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.client.*;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestTemplate;
 
-import de.unistuttgart.t2.common.*;
-import de.unistuttgart.t2.uibackend.exceptions.*;
-import io.github.resilience4j.retry.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 /**
  * Manages interaction with other services.
@@ -29,7 +41,7 @@ public class UIBackendService {
     private final ObjectMapper mapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES,
         false);
 
-    // they have all the trailing '/' and stuff.
+    // URLs don't have a trailing slash
     private final String orchestratorUrl;
     private final String cartUrl;
     private final String inventoryUrl;
@@ -127,11 +139,11 @@ public class UIBackendService {
                     p.setId(getIdfromJson(node));
                     result.add(p);
                 } catch (JsonProcessingException e) {
-                    LOG.error("Cannot deserialize a product received from {}. Exception: {}", url, e);
+                    LOG.error("Cannot deserialize a product received from {}. Exception: {}", url, e.getMessage(), e);
                 }
             }
         } catch (JsonProcessingException e) {
-            LOG.error("Cannot deserialize some products received from {}. Exception: {}", url, e);
+            LOG.error("Cannot deserialize some products received from {}. Exception: {}", url, e.getMessage(), e);
         }
 
         return result;
@@ -148,8 +160,8 @@ public class UIBackendService {
      * @throws CartInteractionFailedException if the request number of unit could not be placed in the cart.
      */
     public void addItemToCart(String sessionId, String productId, int units) throws CartInteractionFailedException {
-        String ressourceUrl = cartUrl + sessionId;
-        LOG.debug("put to " + ressourceUrl);
+        String resourceUrl = cartUrl + "/" + sessionId;
+        LOG.debug("put to " + resourceUrl);
 
         if (units < 0) {
             throw new IllegalArgumentException("Value of units must not be negative.");
@@ -161,10 +173,10 @@ public class UIBackendService {
             if (optCartContent.isPresent()) {
                 CartContent cartContent = optCartContent.get();
                 cartContent.getContent().put(productId, units + cartContent.getUnits(productId));
-                template.put(ressourceUrl, cartContent);
+                template.put(resourceUrl, cartContent);
 
             } else {
-                template.put(ressourceUrl, new CartContent(Map.of(productId, units)));
+                template.put(resourceUrl, new CartContent(Map.of(productId, units)));
             }
         } catch (RestClientException e) {
             throw new CartInteractionFailedException(
@@ -185,8 +197,8 @@ public class UIBackendService {
      */
     public void deleteItemFromCart(String sessionId, String productId, int units)
         throws CartInteractionFailedException {
-        String ressourceUrl = cartUrl + sessionId;
-        LOG.debug("put to " + ressourceUrl);
+        String resourceUrl = cartUrl + "/" + sessionId;
+        LOG.debug("put to " + resourceUrl);
 
         if (units < 0) {
             throw new IllegalArgumentException("Value of units must not be negative.");
@@ -203,9 +215,9 @@ public class UIBackendService {
                 } else {
                     cartContent.getContent().remove(productId);
                 }
-                Retry.decorateRunnable(retry, () -> template.put(ressourceUrl, cartContent)).run();
+                Retry.decorateRunnable(retry, () -> template.put(resourceUrl, cartContent)).run();
             } catch (RestClientException e) {
-                LOG.error("Cannot delete {} unit(s) of {} for {}. Exception: {}", units, productId, sessionId, e);
+                LOG.error("Cannot delete {} unit(s) of {} for {}. Exception: {}", units, productId, sessionId, e.getMessage(), e);
                 throw new CartInteractionFailedException(
                     String.format("Deletion for session %s failed : %s, %d", sessionId, productId, units));
             }
@@ -219,11 +231,11 @@ public class UIBackendService {
      * @throws CartInteractionFailedException if anything went wrong while talking to the cart
      */
     public void deleteCart(String sessionId) throws CartInteractionFailedException {
-        String ressourceUrl = cartUrl + sessionId;
-        LOG.debug("delete to " + ressourceUrl);
+        String resourceUrl = cartUrl + "/" + sessionId;
+        LOG.debug("delete to " + resourceUrl);
 
         try {
-            template.delete(ressourceUrl);
+            template.delete(resourceUrl);
         } catch (RestClientException e) {
             LOG.error("Cannot delete cart.", e);
         }
@@ -232,7 +244,7 @@ public class UIBackendService {
     /**
      * Get a list of all products in a users cart.
      *
-     * @param sessionId identfies the cart content to get
+     * @param sessionId identifies the cart content to get
      * @return a list of the product in the cart
      */
     public List<Product> getProductsInCart(String sessionId) {
@@ -255,7 +267,7 @@ public class UIBackendService {
     }
 
     /**
-     * Reserve a the given number of units of the given product.
+     * Reserve a given number of units of the given product.
      *
      * @param sessionId identifies the session to reserve for
      * @param productId identifies the product to reserve of
@@ -266,18 +278,18 @@ public class UIBackendService {
     public Product makeReservations(String sessionId, String productId, int units)
         throws ReservationFailedException {
 
-        String ressourceUrl = inventoryUrl + reservationEndpoint;
-        LOG.debug("post to " + ressourceUrl);
+        String resourceUrl = inventoryUrl + "/" + reservationEndpoint;
+        LOG.debug("post to " + resourceUrl);
 
         try {
             ReservationRequest request = new ReservationRequest(productId, sessionId, units);
 
             ResponseEntity<Product> inventoryResponse = Retry
-                .decorateSupplier(retry, () -> template.postForEntity(ressourceUrl, request, Product.class)).get();
+                .decorateSupplier(retry, () -> template.postForEntity(resourceUrl, request, Product.class)).get();
 
             return inventoryResponse.getBody();
         } catch (RestClientException e) {
-            LOG.error("Cannot reserve {} units of {} for {}. Exception: {}", units, productId, sessionId, e);
+            LOG.error("Cannot reserve {} units of {} for {}. Exception: {}", units, productId, sessionId, e.getMessage(), e);
             throw new ReservationFailedException(
                 String.format("Reservation for session %s failed : %s, %d", sessionId, productId, units));
         }
@@ -319,11 +331,11 @@ public class UIBackendService {
             LOG.info("deleted cart for session {}.", sessionId);
 
         } catch (RestClientException e) {
-            LOG.error("Failed to contact orchestrator for session {}. Exception: {}", sessionId, e);
+            LOG.error("Failed to contact orchestrator for session {}. Exception: {}", sessionId, e.getMessage(), e);
             throw new OrderNotPlacedException(
                 String.format("No Order placed for session %s. Orchestrator not available. ", sessionId));
         } catch (CartInteractionFailedException e) {
-            LOG.error("Failed to delete cart for session {}. Exception: {}", sessionId);
+            LOG.error("Failed to delete cart for session {}. Exception: {}", sessionId, e.getMessage(), e);
         }
     }
 
@@ -337,22 +349,22 @@ public class UIBackendService {
      * @return content of cart iff it exists
      */
     protected Optional<CartContent> getCartContent(String sessionId) {
-        String ressourceUrl = cartUrl + sessionId;
-        LOG.debug("get from " + ressourceUrl);
+        String resourceUrl = cartUrl + "/" + sessionId;
+        LOG.debug("get from " + resourceUrl);
 
         try {
             ResponseEntity<String> response = Retry
                 .decorateFunction(retry, (String url) -> template.getForEntity(url, String.class))
-                .apply(ressourceUrl);
+                .apply(resourceUrl);
 
             JsonNode root = mapper.readTree(response.getBody());
             JsonNode name = root.path("content");
 
             return Optional.of(mapper.treeToValue(name, CartContent.class));
         } catch (RestClientException e) { // 404 or something like that.
-            LOG.error("Cannot find any cart content for {}. Exception: {} ", sessionId, e);
+            LOG.error("Cannot find any cart content for {}. Exception: {} ", sessionId, e.getMessage(), e);
         } catch (JsonProcessingException e) { // whatever we received, it was no cart content.
-            LOG.error("Cannot deserialize cart content. Exception: {}", e);
+            LOG.error("Cannot deserialize cart content. Exception: {}", e.getMessage(), e);
         }
         return Optional.empty();
     }
@@ -367,13 +379,13 @@ public class UIBackendService {
      * @return product with given id iff it exists
      */
     protected Optional<Product> getSingleProduct(String productId) {
-        String ressourceUrl = inventoryUrl + productId;
-        LOG.debug("get from " + ressourceUrl);
+        String resourceUrl = inventoryUrl + "/" + productId;
+        LOG.debug("get from " + resourceUrl);
 
         try {
             ResponseEntity<String> response = Retry
                 .decorateFunction(retry, (String url) -> template.getForEntity(url, String.class))
-                .apply(ressourceUrl);
+                .apply(resourceUrl);
 
             // important, because inventory api may (did) return more fields than we need.
             mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
@@ -383,7 +395,7 @@ public class UIBackendService {
 
             return Optional.of(product);
         } catch (RestClientException | JsonProcessingException e) {
-            LOG.error("Cannot get product {}. Exception: {}", productId, e);
+            LOG.error("Cannot get product {}. Exception: {}", productId, e.getMessage(), e);
         }
         return Optional.empty();
     }

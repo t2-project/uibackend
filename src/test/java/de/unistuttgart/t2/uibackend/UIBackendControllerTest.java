@@ -1,16 +1,8 @@
 package de.unistuttgart.t2.uibackend;
 
-import static de.unistuttgart.t2.uibackend.supplicants.JSONs.inventoryUrl;
-import static de.unistuttgart.t2.uibackend.supplicants.JSONs.inventoryresponseAllProducts;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
-import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
-import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
-import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
-
-import java.util.List;
-import java.util.Map;
-
+import de.unistuttgart.t2.common.Product;
+import de.unistuttgart.t2.common.UpdateCartRequest;
+import de.unistuttgart.t2.uibackend.supplicants.TestContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -25,13 +17,14 @@ import org.springframework.test.web.client.ExpectedCount;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestTemplate;
 
-import de.unistuttgart.t2.common.Product;
-import de.unistuttgart.t2.common.UpdateCartRequest;
-import de.unistuttgart.t2.uibackend.exceptions.CartInteractionFailedException;
-import de.unistuttgart.t2.uibackend.exceptions.ReservationFailedException;
-import de.unistuttgart.t2.uibackend.supplicants.TestContext;
+import java.util.List;
+import java.util.Map;
 
 import static de.unistuttgart.t2.uibackend.supplicants.JSONs.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 /**
  * Test the logic in the {@link UIBackendController}.
@@ -62,7 +55,7 @@ public class UIBackendControllerTest {
     @Test
     public void test() {
         mockServer.expect(ExpectedCount.twice(), requestTo(inventoryUrl)).andExpect(method(HttpMethod.GET))
-            .andRespond(withSuccess(inventoryresponseAllProducts(), MediaType.APPLICATION_JSON));
+            .andRespond(withSuccess(inventoryResponseAllProducts(), MediaType.APPLICATION_JSON));
 
         List<Product> actual = controller.getAllProducts();
 
@@ -70,25 +63,25 @@ public class UIBackendControllerTest {
     }
 
     @Test
-    public void testDontChangeCart() throws ReservationFailedException, CartInteractionFailedException {
+    public void testDontChangeCart() {
 
-        mockServer.expect(ExpectedCount.never(), requestTo(cartUrl + sessionId));
+        mockServer.expect(ExpectedCount.never(), requestTo(cartUrl + "/" + sessionId));
 
         UpdateCartRequest request = new UpdateCartRequest(Map.of(productId, 0));
         controller.updateCart(sessionId, request);
     }
 
     @Test
-    public void testAddToCart() throws ReservationFailedException, CartInteractionFailedException {
+    public void testAddToCart() {
 
         mockServer.expect(ExpectedCount.once(), requestTo(reservationUrl)).andExpect(method(HttpMethod.POST))
             .andRespond(withSuccess(inventoryResponse(), MediaType.APPLICATION_JSON));
 
-        mockServer.expect(ExpectedCount.twice(), requestTo(cartUrl + sessionId)).andExpect(method(HttpMethod.GET))
+        mockServer.expect(ExpectedCount.twice(), requestTo(cartUrl + "/" + sessionId)).andExpect(method(HttpMethod.GET))
             .andRespond(withStatus(HttpStatus.NOT_FOUND));
 
         int unitsToAdd = 3;
-        mockServer.expect(ExpectedCount.once(), requestTo(cartUrl + sessionId)).andExpect(method(HttpMethod.PUT))
+        mockServer.expect(ExpectedCount.once(), requestTo(cartUrl + "/" + sessionId)).andExpect(method(HttpMethod.PUT))
             .andExpect(jsonPath("$.content." + productId).value(unitsToAdd))
             .andRespond(withSuccess(cartResponse(), MediaType.APPLICATION_JSON));
 
@@ -100,15 +93,15 @@ public class UIBackendControllerTest {
     }
 
     @Test
-    public void testIncreaseCart() throws ReservationFailedException, CartInteractionFailedException {
+    public void testIncreaseCart() {
 
         mockServer.expect(ExpectedCount.once(), requestTo(reservationUrl)).andExpect(method(HttpMethod.POST))
             .andRespond(withSuccess(inventoryResponse(), MediaType.APPLICATION_JSON));
 
-        mockServer.expect(ExpectedCount.once(), requestTo(cartUrl + sessionId)).andExpect(method(HttpMethod.GET))
+        mockServer.expect(ExpectedCount.once(), requestTo(cartUrl + "/" + sessionId)).andExpect(method(HttpMethod.GET))
             .andRespond(withSuccess(cartResponse(), MediaType.APPLICATION_JSON));
 
-        mockServer.expect(ExpectedCount.once(), requestTo(cartUrl + sessionId)).andExpect(method(HttpMethod.PUT))
+        mockServer.expect(ExpectedCount.once(), requestTo(cartUrl + "/" + sessionId)).andExpect(method(HttpMethod.PUT))
             .andExpect(jsonPath("$.content." + productId).value(units * 2))
             .andRespond(withSuccess(cartResponse(), MediaType.APPLICATION_JSON));
 
@@ -120,12 +113,12 @@ public class UIBackendControllerTest {
     }
 
     @Test
-    public void testDecreaseCart() throws ReservationFailedException, CartInteractionFailedException {
+    public void testDecreaseCart() {
 
-        mockServer.expect(ExpectedCount.once(), requestTo(cartUrl + sessionId)).andExpect(method(HttpMethod.GET))
+        mockServer.expect(ExpectedCount.once(), requestTo(cartUrl + "/" + sessionId)).andExpect(method(HttpMethod.GET))
             .andRespond(withSuccess(cartResponse(), MediaType.APPLICATION_JSON));
 
-        mockServer.expect(ExpectedCount.once(), requestTo(cartUrl + sessionId)).andExpect(method(HttpMethod.PUT))
+        mockServer.expect(ExpectedCount.once(), requestTo(cartUrl + "/" + sessionId)).andExpect(method(HttpMethod.PUT))
             .andExpect(jsonPath("$.content." + productId).value(units - 1))
             .andRespond(withSuccess(cartResponse(), MediaType.APPLICATION_JSON));
 
@@ -136,12 +129,12 @@ public class UIBackendControllerTest {
     }
 
     @Test
-    public void testRemoveFromCart() throws ReservationFailedException, CartInteractionFailedException {
+    public void testRemoveFromCart() {
 
-        mockServer.expect(ExpectedCount.once(), requestTo(cartUrl + sessionId)).andExpect(method(HttpMethod.GET))
+        mockServer.expect(ExpectedCount.once(), requestTo(cartUrl + "/" + sessionId)).andExpect(method(HttpMethod.GET))
             .andRespond(withSuccess(cartResponse(), MediaType.APPLICATION_JSON));
 
-        mockServer.expect(ExpectedCount.once(), requestTo(cartUrl + sessionId)).andExpect(method(HttpMethod.PUT))
+        mockServer.expect(ExpectedCount.once(), requestTo(cartUrl + "/" + sessionId)).andExpect(method(HttpMethod.PUT))
             .andExpect(jsonPath("$.content." + productId).doesNotExist())
             .andRespond(withSuccess(cartResponse(), MediaType.APPLICATION_JSON));
 

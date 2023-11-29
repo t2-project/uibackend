@@ -1,5 +1,10 @@
 package de.unistuttgart.t2.uibackend;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import de.unistuttgart.t2.common.ReservationRequest;
+import de.unistuttgart.t2.common.SagaRequest;
+import de.unistuttgart.t2.uibackend.supplicants.JSONs;
+import de.unistuttgart.t2.uibackend.supplicants.TestContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -14,21 +19,15 @@ import org.springframework.test.web.client.ExpectedCount;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestTemplate;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import de.unistuttgart.t2.common.ReservationRequest;
-import de.unistuttgart.t2.common.SagaRequest;
-import de.unistuttgart.t2.uibackend.supplicants.JSONs;
-import de.unistuttgart.t2.uibackend.supplicants.TestContext;
-
 import static de.unistuttgart.t2.uibackend.supplicants.JSONs.*;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
-import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 /**
- * Test whether UIBackendservice makes the right requests.
+ * Test whether UIBackendService makes the right requests.
  * <p>
- * The Set up is like this:
+ * The Setup is like this:
  * <ul>
  * <li>Call the operation under test.
  * <li>Uses the mock server to receive the request and verify that it is placed as intended.
@@ -41,7 +40,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 @ActiveProfiles("test")
 public class UIBackendRequestTest {
 
-    private ObjectMapper mapper = new ObjectMapper();
+    private final ObjectMapper mapper = new ObjectMapper();
 
     @Autowired
     UIBackendService service;
@@ -63,12 +62,12 @@ public class UIBackendRequestTest {
         System.out.println(mapper.writeValueAsString(request));
 
         // mock cart response
-        mockServer.expect(ExpectedCount.once(), requestTo(JSONs.cartUrl + JSONs.sessionId))
+        mockServer.expect(ExpectedCount.once(), requestTo(JSONs.cartUrl + "/" + JSONs.sessionId))
             .andExpect(method(HttpMethod.GET))
             .andRespond(withSuccess(JSONs.cartResponse(), MediaType.APPLICATION_JSON));
 
         // mock inventory response
-        mockServer.expect(ExpectedCount.once(), requestTo(JSONs.inventoryUrl + JSONs.productId))
+        mockServer.expect(ExpectedCount.once(), requestTo(JSONs.inventoryUrl + "/" + JSONs.productId))
             .andExpect(method(HttpMethod.GET))
             .andRespond(withSuccess(inventoryResponse(), MediaType.APPLICATION_JSON));
 
@@ -83,7 +82,7 @@ public class UIBackendRequestTest {
             .andExpect(content().json(mapper.writeValueAsString(request))).andRespond(withStatus(HttpStatus.OK));
 
         // mock delete cart
-        mockServer.expect(ExpectedCount.once(), requestTo(JSONs.cartUrl + JSONs.sessionId))
+        mockServer.expect(ExpectedCount.once(), requestTo(JSONs.cartUrl + "/" + JSONs.sessionId))
             .andExpect(method(HttpMethod.DELETE))
             .andRespond(withSuccess());
 
@@ -96,7 +95,7 @@ public class UIBackendRequestTest {
     @Test
     public void testGetSingleProduct() throws Exception {
 
-        mockServer.expect(ExpectedCount.once(), requestTo(JSONs.inventoryUrl + JSONs.productId))
+        mockServer.expect(ExpectedCount.once(), requestTo(JSONs.inventoryUrl + "/" + JSONs.productId))
             .andExpect(method(HttpMethod.GET))
             .andRespond(withSuccess(inventoryResponse(), MediaType.APPLICATION_JSON));
 
@@ -106,9 +105,9 @@ public class UIBackendRequestTest {
     }
 
     @Test
-    public void testGetCart() throws Exception {
+    public void testGetCart() {
 
-        mockServer.expect(ExpectedCount.once(), requestTo(JSONs.cartUrl + JSONs.sessionId))
+        mockServer.expect(ExpectedCount.once(), requestTo(JSONs.cartUrl + "/" + JSONs.sessionId))
             .andExpect(method(HttpMethod.GET))
             .andRespond(withSuccess(cartResponse(), MediaType.APPLICATION_JSON));
 
@@ -132,11 +131,11 @@ public class UIBackendRequestTest {
     }
 
     @Test
-    public void testGetAllProducts() throws Exception {
+    public void testGetAllProducts() {
 
         // twice = once for products and once for page
         mockServer.expect(ExpectedCount.twice(), requestTo(inventoryUrl)).andExpect(method(HttpMethod.GET))
-            .andRespond(withSuccess(inventoryresponseAllProducts(), MediaType.APPLICATION_JSON));
+            .andRespond(withSuccess(inventoryResponseAllProducts(), MediaType.APPLICATION_JSON));
 
         // execute
         service.getAllProducts();
@@ -145,10 +144,10 @@ public class UIBackendRequestTest {
 
     @Test
     public void testAddItemToCart() throws Exception {
-        mockServer.expect(ExpectedCount.once(), requestTo(cartUrl + sessionId)).andExpect(method(HttpMethod.GET))
+        mockServer.expect(ExpectedCount.once(), requestTo(cartUrl + "/" + sessionId)).andExpect(method(HttpMethod.GET))
             .andRespond(withSuccess(cartResponse(), MediaType.APPLICATION_JSON));
 
-        mockServer.expect(ExpectedCount.once(), requestTo(cartUrl + sessionId)).andExpect(method(HttpMethod.PUT))
+        mockServer.expect(ExpectedCount.once(), requestTo(cartUrl + "/" + sessionId)).andExpect(method(HttpMethod.PUT))
             .andExpect(content().contentType(MediaType.APPLICATION_JSON))
             .andExpect(content().json(updatedCartResponse())).andRespond(withStatus(HttpStatus.OK));
 
@@ -160,10 +159,10 @@ public class UIBackendRequestTest {
 
     @Test
     public void testDeleteItemFromCart() throws Exception {
-        mockServer.expect(ExpectedCount.once(), requestTo(cartUrl + sessionId)).andExpect(method(HttpMethod.GET))
+        mockServer.expect(ExpectedCount.once(), requestTo(cartUrl + "/" + sessionId)).andExpect(method(HttpMethod.GET))
             .andRespond(withSuccess(cartResponse(), MediaType.APPLICATION_JSON));
 
-        mockServer.expect(ExpectedCount.once(), requestTo(cartUrl + sessionId)).andExpect(method(HttpMethod.PUT))
+        mockServer.expect(ExpectedCount.once(), requestTo(cartUrl + "/" + sessionId)).andExpect(method(HttpMethod.PUT))
             .andRespond(withStatus(HttpStatus.OK));
 
         // execute
@@ -172,14 +171,14 @@ public class UIBackendRequestTest {
     }
 
     @Test
-    public void testGetProductsInCart() throws Exception {
-        mockServer.expect(ExpectedCount.once(), requestTo(cartUrl + sessionId)).andExpect(method(HttpMethod.GET))
+    public void testGetProductsInCart() {
+        mockServer.expect(ExpectedCount.once(), requestTo(cartUrl + "/" + sessionId)).andExpect(method(HttpMethod.GET))
             .andRespond(withSuccess(cartResponseMulti(), MediaType.APPLICATION_JSON));
 
-        mockServer.expect(ExpectedCount.once(), requestTo(inventoryUrl + productId)).andExpect(method(HttpMethod.GET))
+        mockServer.expect(ExpectedCount.once(), requestTo(inventoryUrl + "/" + productId)).andExpect(method(HttpMethod.GET))
             .andRespond(withSuccess(inventoryResponse(), MediaType.APPLICATION_JSON));
 
-        mockServer.expect(ExpectedCount.once(), requestTo(inventoryUrl + anotherproductId))
+        mockServer.expect(ExpectedCount.once(), requestTo(inventoryUrl + "/" + anotherproductId))
             .andExpect(method(HttpMethod.GET))
             .andRespond(withSuccess(anotherInventoryResponse(), MediaType.APPLICATION_JSON));
 
