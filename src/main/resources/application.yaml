@@ -16,8 +16,6 @@ management:
     web:
       exposure:
         include: prometheus, health
-    health:
-      show-details: always
   metrics:
     tags:
       application: uibackend
@@ -33,6 +31,7 @@ management:
     health:
       probes:
         enabled: true
+      show-details: always
 
 opentracing:
   jaeger:
