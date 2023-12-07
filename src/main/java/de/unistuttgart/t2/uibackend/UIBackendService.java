@@ -17,7 +17,10 @@ import io.github.resilience4j.retry.RetryRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
@@ -361,8 +364,16 @@ public class UIBackendService {
             JsonNode name = root.path("content");
 
             return Optional.of(mapper.treeToValue(name, CartContent.class));
-        } catch (RestClientException e) { // 404 or something like that.
-            LOG.error("Cannot find any cart content for {}. Exception: {} ", sessionId, e.getMessage(), e);
+        } catch (HttpStatusCodeException e) { // expected 404
+            HttpStatusCode statusCode = e.getStatusCode();
+            if (statusCode == HttpStatus.NOT_FOUND) {
+                LOG.debug("Cart of {} is empty.", sessionId);
+            } else {
+                LOG.error("Getting cart content for {} returned unexpected status code {}. Exception: {} ",
+                    sessionId, statusCode, e.getMessage(), e);
+            }
+        } catch (RestClientException e) { // unexpected exception
+            LOG.error("Error getting cart content for {}. Exception: {} ", sessionId, e.getMessage(), e);
         } catch (JsonProcessingException e) { // whatever we received, it was no cart content.
             LOG.error("Cannot deserialize cart content. Exception: {}", e.getMessage(), e);
         }
