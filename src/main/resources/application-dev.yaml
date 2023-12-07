@@ -1,0 +1,25 @@
+### UI BACKEND
+# Dev profile (other services have to be started locally)
+
+server:
+  port: 8081
+
+t2:
+  orchestrator:
+    url: http://localhost:8085/order
+  cart:
+    url: http://localhost:8080/cart
+  inventory:
+    url: http://localhost:8082/inventory
+    reservationendpoint: reservation
+
+opentracing:
+  jaeger:
+    service-name: uibackend
+    enabled: false
+    udp-sender:
+      host: localhost
+
+logging:
+  level:
+    de.unistuttgart.t2: DEBUG
