@@ -84,10 +84,12 @@ curl -i -X POST -H "Content-Type:application/json" -d '{"cardNumber":"num","card
 
 ## Application Properties
 
-| property                           | read from env var | description |
-|------------------------------------| ----------------- | ----------- |
-| t2.orchestrator.url                | T2_ORCHESTRATOR_URL | url of the orchestrator service. inclusively endpoint and everything! |
-| t2.cart.url                        | T2_CART_URL | url of the cart service |
-| t2.inventory.url                   | T2_INVENTORY_URL | url of the inventory service. |
-| t2.inventory.reservationendpoint   | T2_RESERVATION_ENDPOINT | endpoint for reservations. sub path of the inventory url. guess it would be smarter to pass the entire url. |
-| opentracing.jaeger.udp-sender.host | T2_JAEGER_HOST | for the tracing. |
+| property                                             | read from env var                             | description                                                                                                                  |
+|------------------------------------------------------|-----------------------------------------------|------------------------------------------------------------------------------------------------------------------------------|
+| t2.orchestrator.url                                  | T2_ORCHESTRATOR_URL                           | url of the orchestrator service. inclusively endpoint and everything!                                                        |
+| t2.cart.url                                          | T2_CART_URL                                   | url of the cart service                                                                                                      |
+| t2.inventory.url                                     | T2_INVENTORY_URL                              | url of the inventory service.                                                                                                |
+| t2.inventory.reservationendpoint                     | T2_RESERVATION_ENDPOINT                       | endpoint for reservations. sub path of the inventory url. guess it would be smarter to pass the entire url.                  |
+| opentracing.jaeger.udp-sender.host                   | T2_JAEGER_HOST                                | for the tracing.                                                                                                             |
+| t2.uibackend.simulateComputeIntensiveTask.enabled    | T2_SIMULATE_COMPUTE_INTENSIVE_TASK_ENABLED    | boolean value, defaults to false. if true, a compute intensive calculation method gets used to calculate the order total     |
+| t2.uibackend.simulateComputeIntensiveTask.iterations | T2_SIMULATE_COMPUTE_INTENSIVE_TASK_ITERATIONS | number of iterations the compute intensive calculation method uses. 1000000000 needs around 10 sec (depends on your machine) |
