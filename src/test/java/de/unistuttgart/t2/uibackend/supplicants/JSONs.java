@@ -16,7 +16,7 @@ public class JSONs {
     public static String anotherproductId = "foo2";
     public static int anotherunits = 42;
     public static String sessionId = "bar";
-    public static String orchestratorUrl = "http://localhost:8083/order";
+    public static String orchestratorUrl = "http://localhost:8085/order";
     public static String cartUrl = "http://localhost:8080/cart";
     public static String inventoryUrl = "http://localhost:8082/inventory";
     public static String reservationEndpoint = "reservation";
