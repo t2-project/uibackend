@@ -10,7 +10,10 @@ t2:
     url: ${T2_CART_URL}
   inventory:
     url: ${T2_INVENTORY_URL}
-    reservationendpoint: ${T2_RESERVATION_ENDPOINT} 
+    reservationendpoint: ${T2_RESERVATION_ENDPOINT}
+  computation-simulator:
+    enabled: ${T2_SIMULATE_COMPUTE_INTENSIVE_TASK:false}
+    url: ${T2_COMPUTATION_SIMULATOR_URL}
 
 management:
   endpoints:

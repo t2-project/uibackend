@@ -25,6 +25,10 @@ public class UIBackendApplication {
     private String inventoryUrl;
     @Value("${t2.inventory.reservationendpoint}")
     private String reservationEndpoint;
+    @Value("${t2.computation-simulator.enabled}")
+    private boolean enableComputeIntensiveSimulation;
+    @Value("${t2.computation-simulator.url}")
+    private String computationSimulatorUrl;
 
     public static void main(String[] args) {
         SpringApplication.run(UIBackendApplication.class, args);
@@ -37,7 +41,9 @@ public class UIBackendApplication {
 
     @Bean
     public UIBackendService service() {
-        return new UIBackendService(cartUrl, inventoryUrl, orchestratorUrl, reservationEndpoint);
+        return new UIBackendService(
+            cartUrl, inventoryUrl, orchestratorUrl, reservationEndpoint,
+            enableComputeIntensiveSimulation, computationSimulatorUrl);
     }
 
     @Bean

@@ -17,6 +17,7 @@ import io.github.resilience4j.retry.RetryRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
@@ -45,19 +46,21 @@ public class UIBackendService {
         false);
 
     // URLs don't have a trailing slash
-    private final String orchestratorUrl;
-    private final String cartUrl;
-    private final String inventoryUrl;
+    private String orchestratorUrl;
+    private String cartUrl;
+    private String inventoryUrl;
+    private String reservationEndpoint;
 
-    private final String reservationEndpoint;
+    // simulate compute intensive task
+    private final String computationSimulatorUrl;
+    private final boolean simulateComputeIntensiveTask;
 
     // retry stuff
     RetryConfig config = RetryConfig.custom().maxAttempts(2).build();
     RetryRegistry registry = RetryRegistry.of(config);
     Retry retry = registry.retry("uibackendRetry");
 
-    // because i moved the @value stuff to the configuration thing-y
-    public UIBackendService(String cartUrl, String inventoryUrl, String orchestratorUrl, String reservationEndpoint) {
+    private void initialize(String cartUrl, String inventoryUrl, String orchestratorUrl, String reservationEndpoint) {
         if (cartUrl == null || inventoryUrl == null || orchestratorUrl == null || reservationEndpoint == null) {
             throw new IllegalArgumentException(
                 String.format("urls must not be 'null' but one of these is: %s, %s, %s, %s ", cartUrl, inventoryUrl,
@@ -67,6 +70,26 @@ public class UIBackendService {
         this.inventoryUrl = inventoryUrl;
         this.orchestratorUrl = orchestratorUrl;
         this.reservationEndpoint = reservationEndpoint;
+    }
+
+    public UIBackendService(String cartUrl, String inventoryUrl, String orchestratorUrl, String reservationEndpoint) {
+        initialize(cartUrl, inventoryUrl, orchestratorUrl, reservationEndpoint);
+
+        this.simulateComputeIntensiveTask = false;
+        this.computationSimulatorUrl = null;
+    }
+
+    public UIBackendService(String cartUrl, String inventoryUrl, String orchestratorUrl, String reservationEndpoint,
+                            boolean simulateComputeIntensiveTask, String computationSimulatorUrl) {
+        initialize(cartUrl, inventoryUrl, orchestratorUrl, reservationEndpoint);
+
+        this.simulateComputeIntensiveTask = simulateComputeIntensiveTask;
+        this.computationSimulatorUrl = computationSimulatorUrl;
+
+        if (simulateComputeIntensiveTask) {
+            LOG.warn("Simulate compute intensive task enabled! Service '{}' will be called when an order gets confirmed.",
+                computationSimulatorUrl);
+        }
     }
 
     /**
@@ -311,9 +334,6 @@ public class UIBackendService {
      */
     public void confirmOrder(String sessionId, String cardNumber, String cardOwner, String checksum)
         throws OrderNotPlacedException {
-        // is it more reasonable to get total from cart service, or is it more
-        // reasonable to pass the total from the front end (where it was displayed and
-        // therefore is known) ??
         double total = getTotal(sessionId);
 
         if (total <= 0) {
@@ -339,6 +359,10 @@ public class UIBackendService {
                 String.format("No Order placed for session %s. Orchestrator not available. ", sessionId));
         } catch (CartInteractionFailedException e) {
             LOG.error("Failed to delete cart for session {}. Exception: {}", sessionId, e.getMessage(), e);
+        }
+
+        if (simulateComputeIntensiveTask) {
+            simulateComputeIntensiveTask(sessionId);
         }
     }
 
@@ -449,5 +473,19 @@ public class UIBackendService {
             total += product.get().getPrice() * cart.getUnits(productId);
         }
         return total;
+    }
+
+    /**
+     * Calls the computation-simulator service to simulate a compute intensive scenario.
+     * This method is blocking and waits until the computation is finished!
+     */
+    private void simulateComputeIntensiveTask(String sessionId) {
+        try {
+            LOG.info("start computation simulation for session {} ...", sessionId);
+            template.postForEntity(computationSimulatorUrl, HttpEntity.EMPTY, Void.class);
+            LOG.info("finished computation simulation for session {}.", sessionId);
+        } catch (RestClientException e) {
+            LOG.error("Failed to contact computation-simulator for session {}. Exception: {}", sessionId, e.getMessage(), e);
+        }
     }
 }

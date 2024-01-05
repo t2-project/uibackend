@@ -17,7 +17,6 @@ public class TestContext {
 
     @Bean
     public UIBackendService service() {
-        return new UIBackendService(JSONs.cartUrl, JSONs.inventoryUrl, JSONs.orchestratorUrl,
-            JSONs.reservationEndpoint);
+        return new UIBackendService(JSONs.cartUrl, JSONs.inventoryUrl, JSONs.orchestratorUrl, JSONs.reservationEndpoint);
     }
 }

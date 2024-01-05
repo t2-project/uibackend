@@ -41,8 +41,7 @@ public class UIBackendResponseTest {
 
     @InjectMocks // inject the mocked rest template into service
     private final UIBackendService service =
-        new UIBackendService(JSONs.cartUrl, JSONs.inventoryUrl, JSONs.orchestratorUrl,
-            JSONs.reservationEndpoint);
+        new UIBackendService(JSONs.cartUrl, JSONs.inventoryUrl, JSONs.orchestratorUrl, JSONs.reservationEndpoint);
 
     @Test
     public void getCartContentTest() {

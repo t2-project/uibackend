@@ -12,6 +12,9 @@ t2:
   inventory:
     url: http://localhost:8082/inventory
     reservationendpoint: reservation
+  computation-simulator:
+    enabled: false
+    url: http://localhost:8089/compute
 
 opentracing:
   jaeger:
