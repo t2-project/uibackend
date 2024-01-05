@@ -17,7 +17,6 @@ import io.github.resilience4j.retry.RetryRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
@@ -87,7 +86,7 @@ public class UIBackendService {
         this.computationSimulatorUrl = computationSimulatorUrl;
 
         if (simulateComputeIntensiveTask) {
-            if(computationSimulatorUrl == null) {
+            if (computationSimulatorUrl == null) {
                 throw new IllegalArgumentException(
                     "url of computation simulator must not be 'null' if simulation is enabled!");
             }
@@ -485,9 +484,11 @@ public class UIBackendService {
      */
     private void simulateComputeIntensiveTask(String sessionId) {
         try {
-            LOG.info("start computation simulation for session {} ...", sessionId);
-            template.postForEntity(computationSimulatorUrl, HttpEntity.EMPTY, Void.class);
-            LOG.info("finished computation simulation for session {}.", sessionId);
+            LOG.info("Start simulation of an intensive computation task ... Session: {}", sessionId);
+            // Returns the duration in milliseconds that the calculation took
+            ResponseEntity<Double> response = template.postForEntity(computationSimulatorUrl, sessionId, Double.class);
+            Double duration = response.getBody();
+            LOG.info("Finished simulation of an intensive computation task. Duration: {} ms, Session: {}", duration, sessionId);
         } catch (RestClientException e) {
             LOG.error("Failed to contact computation-simulator for session {}. Exception: {}", sessionId, e.getMessage(), e);
         }
