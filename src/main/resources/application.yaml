@@ -13,7 +13,7 @@ t2:
     reservationendpoint: ${T2_RESERVATION_ENDPOINT}
   computation-simulator:
     enabled: ${T2_SIMULATE_COMPUTE_INTENSIVE_TASK:false}
-    url: ${T2_COMPUTATION_SIMULATOR_URL}
+    url: ${T2_COMPUTATION_SIMULATOR_URL:#{null}}
 
 management:
   endpoints:

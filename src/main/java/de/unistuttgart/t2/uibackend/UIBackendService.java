@@ -87,6 +87,10 @@ public class UIBackendService {
         this.computationSimulatorUrl = computationSimulatorUrl;
 
         if (simulateComputeIntensiveTask) {
+            if(computationSimulatorUrl == null) {
+                throw new IllegalArgumentException(
+                    "url of computation simulator must not be 'null' if simulation is enabled!");
+            }
             LOG.warn("Simulate compute intensive task enabled! Service '{}' will be called when an order gets confirmed.",
                 computationSimulatorUrl);
         }
