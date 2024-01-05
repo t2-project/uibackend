@@ -10,11 +10,7 @@ t2:
     url: ${T2_CART_URL}
   inventory:
     url: ${T2_INVENTORY_URL}
-    reservationendpoint: ${T2_RESERVATION_ENDPOINT}
-  uibackend:
-    simulateComputeIntensiveTask:
-      enabled: ${T2_SIMULATE_COMPUTE_INTENSIVE_TASK_ENABLED:false}
-      iterations: ${T2_SIMULATE_COMPUTE_INTENSIVE_TASK_ITERATIONS:1000000000}
+    reservationendpoint: ${T2_RESERVATION_ENDPOINT} 
 
 management:
   endpoints:

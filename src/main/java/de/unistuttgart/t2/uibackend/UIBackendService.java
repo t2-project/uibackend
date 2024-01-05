@@ -45,21 +45,19 @@ public class UIBackendService {
         false);
 
     // URLs don't have a trailing slash
-    private String orchestratorUrl;
-    private String cartUrl;
-    private String inventoryUrl;
-    private String reservationEndpoint;
+    private final String orchestratorUrl;
+    private final String cartUrl;
+    private final String inventoryUrl;
 
-    // simulate compute intensive task
-    private boolean simulateComputeIntensiveTask;
-    private int simulateComputeIntensiveTaskIterations;
+    private final String reservationEndpoint;
 
     // retry stuff
     RetryConfig config = RetryConfig.custom().maxAttempts(2).build();
     RetryRegistry registry = RetryRegistry.of(config);
     Retry retry = registry.retry("uibackendRetry");
 
-    private void initialize(String cartUrl, String inventoryUrl, String orchestratorUrl, String reservationEndpoint) {
+    // because i moved the @value stuff to the configuration thing-y
+    public UIBackendService(String cartUrl, String inventoryUrl, String orchestratorUrl, String reservationEndpoint) {
         if (cartUrl == null || inventoryUrl == null || orchestratorUrl == null || reservationEndpoint == null) {
             throw new IllegalArgumentException(
                 String.format("urls must not be 'null' but one of these is: %s, %s, %s, %s ", cartUrl, inventoryUrl,
@@ -69,24 +67,6 @@ public class UIBackendService {
         this.inventoryUrl = inventoryUrl;
         this.orchestratorUrl = orchestratorUrl;
         this.reservationEndpoint = reservationEndpoint;
-    }
-
-    public UIBackendService(String cartUrl, String inventoryUrl, String orchestratorUrl, String reservationEndpoint) {
-        initialize(cartUrl, inventoryUrl, orchestratorUrl, reservationEndpoint);
-        this.simulateComputeIntensiveTask = false;
-    }
-
-    public UIBackendService(String cartUrl, String inventoryUrl, String orchestratorUrl, String reservationEndpoint,
-                            boolean simulateComputeIntensiveTask, int simulateComputeIntensiveTaskIterations) {
-        initialize(cartUrl, inventoryUrl, orchestratorUrl, reservationEndpoint);
-
-        this.simulateComputeIntensiveTask = simulateComputeIntensiveTask;
-        this.simulateComputeIntensiveTaskIterations = simulateComputeIntensiveTaskIterations;
-
-        if (simulateComputeIntensiveTask) {
-            LOG.warn("Simulate compute intensive task enabled! Order total will be calculated {} times.",
-                simulateComputeIntensiveTaskIterations);
-        }
     }
 
     /**
@@ -457,17 +437,10 @@ public class UIBackendService {
      * @return the total money to pay for products in the cart
      */
     private double getTotal(String sessionId) {
-        if (!simulateComputeIntensiveTask) {
-            return getTotalSimple(sessionId);
-        } else {
-            return getTotalComputeIntensive(sessionId);
-        }
-    }
-
-    private double getTotalSimple(String sessionId) {
         CartContent cart = getCartContent(sessionId).orElse(new CartContent());
 
         double total = 0;
+
         for (String productId : cart.getProductIds()) {
             Optional<Product> product = getSingleProduct(productId);
             if (product.isEmpty()) {
@@ -475,29 +448,6 @@ public class UIBackendService {
             }
             total += product.get().getPrice() * cart.getUnits(productId);
         }
-
-        return total;
-    }
-
-    private double getTotalComputeIntensive(String sessionId) {
-        LOG.debug("Compute intensive order calculation started with {} iterations", simulateComputeIntensiveTaskIterations);
-        CartContent cart = getCartContent(sessionId).orElse(new CartContent());
-
-        double total = 0;
-        for (String productId : cart.getProductIds()) {
-            Optional<Product> product = getSingleProduct(productId);
-            if (product.isEmpty()) {
-                return 0;
-            }
-
-            // simulate compute intensive task
-            double temp = 0;
-            for (int i = 0; i < simulateComputeIntensiveTaskIterations; i++) {
-                temp += product.get().getPrice() * cart.getUnits(productId);
-            }
-            total += temp / simulateComputeIntensiveTaskIterations;
-        }
-        LOG.debug("Compute intensive order calculation finished");
         return total;
     }
 }

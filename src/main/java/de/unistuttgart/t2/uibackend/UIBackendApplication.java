@@ -26,11 +26,6 @@ public class UIBackendApplication {
     @Value("${t2.inventory.reservationendpoint}")
     private String reservationEndpoint;
 
-    @Value("${t2.uibackend.simulateComputeIntensiveTask.enabled}")
-    private boolean simulateComputeIntensiveTask;
-    @Value("${t2.uibackend.simulateComputeIntensiveTask.iterations}")
-    private int simulateComputeIntensiveTaskIterations;
-
     public static void main(String[] args) {
         SpringApplication.run(UIBackendApplication.class, args);
     }
@@ -42,8 +37,7 @@ public class UIBackendApplication {
 
     @Bean
     public UIBackendService service() {
-        return new UIBackendService(cartUrl, inventoryUrl, orchestratorUrl, reservationEndpoint,
-            simulateComputeIntensiveTask, simulateComputeIntensiveTaskIterations);
+        return new UIBackendService(cartUrl, inventoryUrl, orchestratorUrl, reservationEndpoint);
     }
 
     @Bean
