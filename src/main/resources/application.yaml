@@ -12,7 +12,7 @@ t2:
     url: ${T2_INVENTORY_URL}
     reservationendpoint: ${T2_RESERVATION_ENDPOINT}
   computation-simulator:
-    enabled: ${T2_SIMULATE_COMPUTE_INTENSIVE_TASK:false}
+    enabled: ${T2_COMPUTATION_SIMULATOR_ENABLED:false}
     url: ${T2_COMPUTATION_SIMULATOR_URL:#{null}}
 
 management:
