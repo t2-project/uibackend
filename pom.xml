@@ -23,7 +23,7 @@
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
-        <!-- tag::actuator[] -->
+        <!-- tracing & monitoring -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
@@ -38,19 +38,12 @@
             <artifactId>opentracing-spring-jaeger-cloud-starter</artifactId>
             <version>${env.T2_JAEGER_VERSION}</version>
         </dependency>
-        <!-- end::actuator[] -->
 
-        <!-- tag::tests[] -->
+        <!-- tests -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
-        </dependency>
-        <!-- end::tests[] -->
-
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-webflux</artifactId>
         </dependency>
 
         <!-- common things -->
