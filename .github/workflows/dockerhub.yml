@@ -10,35 +10,30 @@ jobs:
     name: Push Docker image to Docker Hub
     runs-on: ubuntu-latest
     steps:
-    - name: set env
-      run: |
-         curl -o setenv.sh -- 'https://raw.githubusercontent.com/t2-project/devops/main/setenv.sh'
-         vi setenv.sh -c ':%s/^export //' -c ':%s/\(.*\)#.*/\1/' -c ':%s/\s*$//g' -c ':wq' # Strip out 'export ' at the beginning, comments, and trailing whitespace
-         cat setenv.sh >> $GITHUB_ENV
     - name: Login to DockerHub
       uses: docker/login-action@v3 
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
-    - name: check out uibackend
+    - name: check out parent
       uses: actions/checkout@v4
       with:
-        path: './uibackend'
-    - name: check out common
-      uses: actions/checkout@v4
-      with:
-        repository: t2-project/common
-        path: './common'
-    - name: set up jdk
+        repository: t2-project/microservices
+        submodules: true
+    - name: Ensure to use latest versions
+      run: |
+        git submodule update --init --recursive
+        git submodule update --recursive --remote
+    - name: Set up jdk
       uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
         java-version: '17'
         cache: 'maven'
-    - name: Maven build common
-      run: cd common && ./mvnw clean install
-    - name: Maven build uibackend
-      run: cd uibackend && ./mvnw clean install
+    - name: Maven build
+      run: |
+        chmod +x mvnw
+        ./mvnw --projects uibackend --also-make clean install
     - run: |
         echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
     - name: Docker build and push (manual)
