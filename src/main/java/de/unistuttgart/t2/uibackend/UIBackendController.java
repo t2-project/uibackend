@@ -7,14 +7,17 @@ import de.unistuttgart.t2.uibackend.exceptions.CartInteractionFailedException;
 import de.unistuttgart.t2.uibackend.exceptions.OrderNotPlacedException;
 import de.unistuttgart.t2.uibackend.exceptions.ReservationFailedException;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,12 +38,35 @@ public class UIBackendController {
     }
 
     /**
-     * @return a list of all products in the inventory
+     * Get all existing products in the inventory
+     * 
+     * @return list of products
      */
-    @Operation(summary = "List all available products")
+    @Operation(summary = "List all available products", description = "Retrieve a list of all available products.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "List of products retrieved successfully", content = @Content(array = @ArraySchema(schema = @Schema(implementation = Product.class)))),
+    })
     @GetMapping("/products")
     public List<Product> getAllProducts() {
         return service.getAllProducts();
+    }
+
+    /**
+     * Get a specific product by its ID
+     * 
+     * @param productId ID of the product
+     * @return product if ID exists
+     */
+    @Operation(summary = "Get product by ID", description = "Retrieve a product by its unique identifier.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Product retrieved successfully", content = @Content(schema = @Schema(implementation = Product.class))),
+            @ApiResponse(responseCode = "404", description = "Product not found", content = @Content(schema = @Schema(example = "{\"message\": \"Product with ID '123' not found\"}")))
+    })
+    @GetMapping("/products/{productId}")
+    public Product getProduct(@PathVariable String productId) {
+        return service.getSingleProduct(productId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Product with ID '" + productId + "' not found"));
     }
 
     /**

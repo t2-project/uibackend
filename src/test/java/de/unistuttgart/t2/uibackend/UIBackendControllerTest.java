@@ -10,18 +10,21 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 import org.springframework.test.web.client.ExpectedCount;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Map;
 
 import static de.unistuttgart.t2.uibackend.supplicants.JSONs.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
@@ -53,13 +56,34 @@ public class UIBackendControllerTest {
     }
 
     @Test
-    public void test() {
+    public void testGetAllProducts() {
         mockServer.expect(ExpectedCount.twice(), requestTo(inventoryUrl)).andExpect(method(HttpMethod.GET))
             .andRespond(withSuccess(inventoryResponseAllProducts(), MediaType.APPLICATION_JSON));
 
         List<Product> actual = controller.getAllProducts();
 
         assertEquals(2, actual.size());
+    }
+
+    @Test
+    public void testGetSingleProduct() {
+        mockServer.expect(ExpectedCount.once(), requestTo(inventoryUrl + "/" + productId)).andExpect(method(HttpMethod.GET))
+            .andRespond(withSuccess(inventoryResponse(), MediaType.APPLICATION_JSON));
+
+        Product product = controller.getProduct(productId);
+
+        assertEquals(productId, product.getId());
+    }
+
+    @Test
+    public void testGetProductNotFoundThrowsException() {
+        mockServer.expect(ExpectedCount.min(1), requestTo(inventoryUrl + "/" + productId)).andExpect(method(HttpMethod.GET))
+            .andRespond(withStatus(HttpStatusCode.valueOf(404)));
+
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+            () -> controller.getProduct(productId));
+
+        assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
     }
 
     @Test
